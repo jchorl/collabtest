@@ -1,16 +1,20 @@
 package handlers
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"os"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"github.com/labstack/echo"
 )
 
 func Init(api *echo.Group) {
 	api.GET("/helloworld", helloWorld)
 	api.POST("/file", fileUpload)
+	api.GET("/dockerps", dockerPs)
 }
 
 func helloWorld(c echo.Context) error {
@@ -41,4 +45,25 @@ func fileUpload(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusOK)
+}
+
+func dockerPs(c echo.Context) error {
+	defaultHeaders := map[string]string{"User-Agent": "engine-api-cli-1.0"}
+	cli, err := client.NewClient("unix:///var/run/docker.sock", "v1.22", nil, defaultHeaders)
+	if err != nil {
+		return err
+	}
+
+	options := types.ContainerListOptions{All: true}
+	containers, err := cli.ContainerList(context.Background(), options)
+	if err != nil {
+		return err
+	}
+
+	ctrs := [][]string{}
+	for _, ctr := range containers {
+		ctrs = append(ctrs, ctr.Names)
+	}
+
+	return c.JSON(http.StatusOK, ctrs)
 }
