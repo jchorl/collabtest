@@ -6,6 +6,10 @@ import (
 	"github.com/labstack/echo"
 )
 
-func HelloWorld(c echo.Context) error {
+func Init(api *echo.Group) {
+	api.GET("/helloworld", helloWorld)
+}
+
+func helloWorld(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
 }
