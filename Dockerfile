@@ -1,4 +1,7 @@
 FROM golang:latest
+RUN wget https://get.docker.com/builds/Linux/x86_64/docker-latest.tgz && \
+    tar zxf docker-latest.tgz && \
+    mv docker/docker /usr/bin
 ADD . /go/src/github.com/jchorl/collabtest
 WORKDIR /go/src/github.com/jchorl/collabtest
 RUN go get ./...
