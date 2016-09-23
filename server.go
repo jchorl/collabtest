@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/jchorl/collabtest/handlers"
+	"github.com/jchorl/collabtest/api"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/labstack/echo"
@@ -18,8 +18,8 @@ func main() {
 	e.File("/new", "static/new.html")
 	e.Static("/static", "static")
 
-	api := e.Group("/api")
-	handlers.Init(api)
+	apiRoutes := e.Group("/api")
+	api.Init(apiRoutes)
 
 	e.Run(standard.New(":8080"))
 }

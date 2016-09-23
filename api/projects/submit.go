@@ -1,4 +1,4 @@
-package handlers
+package projects
 
 import (
 	"archive/tar"
@@ -16,8 +16,6 @@ import (
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
 	"github.com/labstack/echo"
-
-	"github.com/jchorl/collabtest/models"
 )
 
 const (
@@ -26,13 +24,7 @@ const (
 
 var DEFAULT_HEADERS = map[string]string{"User-Agent": "engine-api-cli-1.0"}
 
-func Init(api *echo.Group) {
-	api.GET("/helloworld", helloWorld)
-	api.POST("/create", createProject)
-	api.POST("/uploadAndBuild", uploadAndBuild)
-}
-
-func uploadAndBuild(c echo.Context) error {
+func submit(c echo.Context) error {
 	file, err := c.FormFile("file")
 	if err != nil {
 		logrus.WithError(err).Error("Unable to get file from upload req")
@@ -57,7 +49,7 @@ func uploadAndBuild(c echo.Context) error {
 
 	// TODO actually select correct image
 	containerConfig := &container.Config{
-		Image:           "gcc",
+		Image:           "frolvlad/alpine-gcc",
 		WorkingDir:      "/build",
 		NetworkDisabled: true,
 		StopTimeout:     &timeout,
@@ -87,6 +79,7 @@ func uploadAndBuild(c echo.Context) error {
 	}
 
 	// TODO wait until container is complete
+	cli.ContainerWait(context.Background(), createResponse.ID)
 
 	return c.NoContent(http.StatusAccepted)
 }
@@ -156,21 +149,4 @@ func addTarFile(filename string, file io.ReadCloser, tarWriter *tar.Writer, tarB
 	}
 
 	return nil
-}
-
-func helloWorld(c echo.Context) error {
-	return c.String(http.StatusOK, "Hello, World!")
-}
-
-func createProject(c echo.Context) error {
-	projectName := c.FormValue("name")
-	db, err := models.GetDB()
-	if err != nil {
-		return err
-	}
-
-	project := models.Project{Name: projectName}
-	db.Create(&project)
-
-	return c.String(http.StatusOK, "Connected to postgres")
 }
