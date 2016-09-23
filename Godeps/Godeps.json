@@ -4,6 +4,11 @@
 	"GodepVersion": "v74",
 	"Deps": [
 		{
+			"ImportPath": "github.com/Microsoft/go-winio",
+			"Comment": "v0.3.5-2-gce2922f",
+			"Rev": "ce2922f643c8fd76b46cadc7f404a06282678b34"
+		},
+		{
 			"ImportPath": "github.com/Sirupsen/logrus",
 			"Comment": "v0.10.0-38-g3ec0642",
 			"Rev": "3ec0642a7fb6488f65b06f9040adc67e3990296a"
@@ -114,6 +119,15 @@
 			"Rev": "f2145db703495b2e525c59662db69a7344b00bb8"
 		},
 		{
+			"ImportPath": "github.com/jinzhu/gorm",
+			"Comment": "v1.0-69-g041cd3d",
+			"Rev": "041cd3dd31a68a3e9ad20fcddb46085df5aebc76"
+		},
+		{
+			"ImportPath": "github.com/jinzhu/inflection",
+			"Rev": "74387dc39a75e970e7a3ae6a3386b5bd2e5c5cff"
+		},
+		{
 			"ImportPath": "github.com/labstack/echo",
 			"Comment": "v2.0.2-68-g04f4504",
 			"Rev": "04f45046b1ebb56690836391fe26f6f1187788b7"
@@ -164,6 +178,16 @@
 			"Rev": "35d2b9f99cc2aa9f89dce3ea318229c68769e182"
 		},
 		{
+			"ImportPath": "github.com/lib/pq",
+			"Comment": "go1.0-cutoff-117-g50761b0",
+			"Rev": "50761b0867bd1d9d069276790bcd4a3bccf2324a"
+		},
+		{
+			"ImportPath": "github.com/lib/pq/oid",
+			"Comment": "go1.0-cutoff-117-g50761b0",
+			"Rev": "50761b0867bd1d9d069276790bcd4a3bccf2324a"
+		},
+		{
 			"ImportPath": "github.com/mattn/go-colorable",
 			"Comment": "v0.0.6",
 			"Rev": "ed8eb9e318d7a84ce5915b495b7d35e0cfe7b5a8"
@@ -197,6 +221,14 @@
 		{
 			"ImportPath": "golang.org/x/net/proxy",
 			"Rev": "6d3beaea10370160dea67f5c9327ed791afd5389"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/windows",
+			"Rev": "8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9"
 		}
 	]
 }
