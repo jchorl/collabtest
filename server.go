@@ -12,6 +12,7 @@ func main() {
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.File("/", "static/index.html")
+	e.File("/new", "static/new.html")
 	e.Static("/static", "static")
 
 	api := e.Group("/api")

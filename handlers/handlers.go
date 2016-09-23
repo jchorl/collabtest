@@ -9,12 +9,15 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/labstack/echo"
+
+	"github.com/jchorl/collabtest/models"
 )
 
 func Init(api *echo.Group) {
 	api.GET("/helloworld", helloWorld)
 	api.POST("/file", fileUpload)
 	api.GET("/dockerps", dockerPs)
+	api.POST("/create", createProject)
 }
 
 func helloWorld(c echo.Context) error {
@@ -66,4 +69,17 @@ func dockerPs(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, ctrs)
+}
+
+func createProject(c echo.Context) error {
+	projectName := c.FormValue("name")
+	db, err := models.GetDB()
+	if err != nil {
+		return err
+	}
+
+	project := models.Project{Name: projectName}
+	db.Create(&project)
+
+	return c.String(http.StatusOK, "Connected to postgres")
 }

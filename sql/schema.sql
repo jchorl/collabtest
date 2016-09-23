@@ -1,0 +1,8 @@
+CREATE TABLE projects (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(31) NOT NULL,
+  created_at TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP NOT NULL,
+  deleted_at TIMESTAMP DEFAULT NULL
+);
+
