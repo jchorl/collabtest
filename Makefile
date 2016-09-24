@@ -21,7 +21,7 @@ network:
 	docker network create collabtest-network
 
 run:
-	docker run -d \
+	docker run \
 		-p $(PORT):$(PORT) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		--name collabtest \
