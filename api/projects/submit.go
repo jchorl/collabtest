@@ -81,7 +81,18 @@ func submit(c echo.Context) error {
 	// TODO wait until container is complete
 	cli.ContainerWait(context.Background(), createResponse.ID)
 
-	return c.NoContent(http.StatusAccepted)
+	logsOptions := types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+	}
+	logsReadCloser, err := cli.ContainerLogs(context.Background(), createResponse.ID, logsOptions)
+	logsBuffer := new(bytes.Buffer)
+	if _, err := logsBuffer.ReadFrom(logsReadCloser); err != nil {
+		logrus.WithError(err).Error("Cannot read container logs")
+	}
+	defer logsReadCloser.Close()
+
+	return c.String(http.StatusOK, logsBuffer.String())
 }
 
 func copyToContainer(ctx context.Context, cli *client.Client, file io.ReadCloser, dstContainer, dstPath string) (err error) {
