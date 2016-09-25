@@ -28,7 +28,9 @@ func main() {
 	e.Use(
 		middleware.Logger(),
 		dbMiddleware(db),
+		middleware.BodyLimit("5M"),
 	)
+
 	e.File("/", "static/index.html")
 	e.File("/new", "static/new.html")
 	e.Static("/static", "static")

@@ -55,9 +55,12 @@ func submit(c echo.Context) error {
 		Cmd:             strslice.StrSlice{"sh", "-c", "g++ " + file.Filename + " && ./a.out"},
 	}
 
-	// TODO set ulimits in the host config
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
+		Resources: container.Resources{
+			CPUShares: constants.BUILD_CPU_SHARE,
+			Memory:    constants.BUILD_MEMORY,
+		},
 	}
 
 	createResponse, err := dockerClient.ContainerCreate(context.Background(), containerConfig, hostConfig, nil, "")
