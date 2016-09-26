@@ -7,19 +7,19 @@ import (
 	"context"
 	"errors"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"path"
 	"path/filepath"
 
-    "github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
-	"github.com/labstack/echo"
-
 	"github.com/jchorl/collabtest/constants"
+	"github.com/labstack/echo"
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 func submit(c echo.Context) error {
@@ -164,6 +164,33 @@ func addTarFile(filename string, file io.ReadCloser, tarWriter *tar.Writer, tarB
 	return nil
 }
 
-func fileDiff(outfile string, expfile string) error {
-    return nil
+func diff(c echo.Context) error {
+	// Hardcoded stub. Normally, we would generate the output by running the program on each of the inputs.
+	diff, err := fileDiff("projects/incorrect/output/test.out", "projects/incorrect/expected/test.exp")
+	if err != nil {
+		logrus.WithError(err).Error("Error computing file diff.")
+		return err
+	}
+	logrus.Info(diff)
+	return c.HTML(http.StatusOK, diff)
+}
+
+func fileDiff(outpath string, exppath string) (string, error) {
+	outbuf, err := ioutil.ReadFile(outpath)
+	if err != nil {
+		logrus.WithError(err).Error("Error opening output file for reading.")
+		return "", err
+	}
+	out := string(outbuf)
+
+	expbuf, err := ioutil.ReadFile(exppath)
+	if err != nil {
+		logrus.WithError(err).Error("Error opening expected output file for reading.")
+		return "", err
+	}
+	exp := string(expbuf)
+
+	dmp := diffmatchpatch.New()
+	diffs := dmp.DiffMain(out, exp, false)
+	return dmp.DiffPrettyHtml(diffs), nil
 }
