@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
@@ -22,8 +24,11 @@ func main() {
 	}
 
 	e := echo.New()
-	e.Use(middleware.Logger())
-	e.Use(dbMiddleware(db))
+	e.Pre(middleware.HTTPSRedirect())
+	e.Use(
+		middleware.Logger(),
+		dbMiddleware(db),
+	)
 	e.File("/", "static/index.html")
 	e.File("/new", "static/new.html")
 	e.Static("/static", "static")
@@ -31,7 +36,7 @@ func main() {
 	apiRoutes := e.Group("/api")
 	api.Init(apiRoutes)
 
-	e.Run(standard.New(":8080"))
+	e.Run(standard.WithTLS(":"+os.Getenv("PORT"), "/etc/letsencrypt/live/"+os.Getenv("DOMAIN")+"/fullchain.pem", "/etc/letsencrypt/live/"+os.Getenv("DOMAIN")+"/privkey.pem"))
 }
 
 func dbMiddleware(db *gorm.DB) echo.MiddlewareFunc {
