@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 
+    "github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -161,4 +162,8 @@ func addTarFile(filename string, file io.ReadCloser, tarWriter *tar.Writer, tarB
 	}
 
 	return nil
+}
+
+func fileDiff(outfile string, expfile string) error {
+    return nil
 }
