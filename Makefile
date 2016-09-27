@@ -17,3 +17,4 @@ run:
 
 db: 
 	docker run --name collabtestdb --expose=5432 -v $(PWD)/sql:/docker-entrypoint-initdb.d -h collabtestdb --network collabtest-network -e POSTGRES_USER=collabtest -e POSTGRES_PASSWORD=collabtest -d postgres
+	sleep 5 # make sure run doesn't start until db is finished init or else go panics when it doesn't connect
