@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<title>CollabTest</title>
+<body>
+    <div id="main"></div>
+    <a id="submit">Submit</a>
+    <div id="previous"></div>
+    <script src="/static/jquery.min.js"></script>
+    <script src="/static/script.js"></script>
+    <script>
+      var id = getQueryVariable("id")
+      $("#main").text("Project " + id)
+
+      $("#submit").attr("href", "submit?id=" + id);
+
+      $.get('/api/projects/' + id, function(data) {
+        for(submission of data.Value.Submissions) {
+          $("#previous").append('<div>date: ' + submission.CreatedAt + ' stdout: ' + submission.Stdout + '</div>')
+        }
+      });
+    </script>
+</body>

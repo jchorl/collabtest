@@ -18,7 +18,7 @@ func Init(projects *echo.Group) {
 	projects.GET("/:id", show)
 	projects.POST("/create", create)
 	projects.DELETE("/:id", delete)
-	projects.POST("/submit", submit)
+	projects.POST("/:id/submit", submit)
 	projects.GET("/diff", diff)
 }
 
@@ -62,7 +62,7 @@ func show(c echo.Context) error {
 
 	id := c.Param("id")
 
-	project := db.Find(&models.Project{}, id)
+	project := db.Preload("Submissions").Find(&models.Project{}, id)
 	return c.JSON(http.StatusOK, project)
 }
 

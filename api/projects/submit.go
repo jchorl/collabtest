@@ -12,15 +12,18 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
+	"strconv"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
 	"github.com/sergi/go-diff/diffmatchpatch"
 
 	"github.com/jchorl/collabtest/constants"
+	"github.com/jchorl/collabtest/models"
 )
 
 func submit(c echo.Context) error {
@@ -87,6 +90,27 @@ func submit(c echo.Context) error {
 		logrus.WithError(err).Error("Cannot read container logs")
 	}
 	defer logsReadCloser.Close()
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"id": c.Param("id"),
+		}).Error("Unable to convert id from str to int in project submit")
+	}
+	submission := models.Submission{
+		ProjectID: uint(id),
+		Stdout:    logsBuffer.String()[8:],
+		Stderr:    "",
+	}
+	db, ok := c.Get(constants.CTX_DB).(*gorm.DB)
+	if !ok {
+		logrus.WithFields(logrus.Fields{
+			"context": c,
+		}).Error("Unable to get DB from context in project submit")
+		return errors.New("Unable to get DB from context")
+	}
+
+	db.Create(&submission)
 
 	// TODO: Figure out why an extra eight bytes are stored at the front of the buffer.
 	// \u0001 followed by seven \u0000.
