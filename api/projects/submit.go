@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"path"
@@ -16,15 +17,19 @@ import (
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
 	"github.com/labstack/echo"
-)
 
-const (
-	BUILD_TIMEOUT = 5
+	"github.com/jchorl/collabtest/constants"
 )
-
-var DEFAULT_HEADERS = map[string]string{"User-Agent": "engine-api-cli-1.0"}
 
 func submit(c echo.Context) error {
+	dockerClient, ok := c.Get(constants.CTX_DOCKER_CLIENT).(*client.Client)
+	if !ok {
+		logrus.WithFields(logrus.Fields{
+			"context": c,
+		}).Error("Unable to get docker client from context in project submit")
+		return errors.New("Unable to get docker client from context")
+	}
+
 	file, err := c.FormFile("file")
 	if err != nil {
 		logrus.WithError(err).Error("Unable to get file from upload req")
@@ -38,14 +43,8 @@ func submit(c echo.Context) error {
 	}
 	defer src.Close()
 
-	cli, err := client.NewClient("unix:///var/run/docker.sock", "v1.22", nil, DEFAULT_HEADERS)
-	if err != nil {
-		logrus.WithError(err).Error("Could not create docker client")
-		return err
-	}
-
 	// cannot take address of const int
-	timeout := BUILD_TIMEOUT
+	timeout := constants.BUILD_TIMEOUT
 
 	// TODO actually select correct image
 	containerConfig := &container.Config{
@@ -56,36 +55,38 @@ func submit(c echo.Context) error {
 		Cmd:             strslice.StrSlice{"sh", "-c", "g++ " + file.Filename + " && ./a.out"},
 	}
 
-	// TODO set ulimits in the host config
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
+		Resources: container.Resources{
+			CPUShares: constants.BUILD_CPU_SHARE,
+			Memory:    constants.BUILD_MEMORY,
+		},
 	}
 
-	createResponse, err := cli.ContainerCreate(context.Background(), containerConfig, hostConfig, nil, "")
+	createResponse, err := dockerClient.ContainerCreate(context.Background(), containerConfig, hostConfig, nil, "")
 	if err != nil {
 		logrus.WithError(err).Error("Could not create container")
 		return err
 	}
 
-	err = copyToContainer(context.Background(), cli, src, createResponse.ID, path.Join("/build", file.Filename))
+	err = copyToContainer(context.Background(), dockerClient, src, createResponse.ID, path.Join("/build", file.Filename))
 	if err != nil {
 		logrus.WithError(err).Error("Could not copy to container")
 		return err
 	}
 
-	if err := cli.ContainerStart(context.Background(), createResponse.ID, types.ContainerStartOptions{}); err != nil {
+	if err := dockerClient.ContainerStart(context.Background(), createResponse.ID, types.ContainerStartOptions{}); err != nil {
 		logrus.WithError(err).Error("Error starting container")
 		return err
 	}
 
-	// TODO wait until container is complete
-	cli.ContainerWait(context.Background(), createResponse.ID)
+	dockerClient.ContainerWait(context.Background(), createResponse.ID)
 
 	logsOptions := types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 	}
-	logsReadCloser, err := cli.ContainerLogs(context.Background(), createResponse.ID, logsOptions)
+	logsReadCloser, err := dockerClient.ContainerLogs(context.Background(), createResponse.ID, logsOptions)
 	logsBuffer := new(bytes.Buffer)
 	if _, err := logsBuffer.ReadFrom(logsReadCloser); err != nil {
 		logrus.WithError(err).Error("Cannot read container logs")
@@ -95,7 +96,7 @@ func submit(c echo.Context) error {
 	return c.String(http.StatusOK, logsBuffer.String())
 }
 
-func copyToContainer(ctx context.Context, cli *client.Client, file io.ReadCloser, dstContainer, dstPath string) (err error) {
+func copyToContainer(ctx context.Context, dockerClient *client.Client, file io.ReadCloser, dstContainer, dstPath string) (err error) {
 	pipeReader, pipeWriter := io.Pipe()
 	buf := bufio.NewWriterSize(pipeWriter, 32*1024)
 
@@ -125,7 +126,7 @@ func copyToContainer(ctx context.Context, cli *client.Client, file io.ReadCloser
 		}
 	}()
 
-	return cli.CopyToContainer(ctx, dstContainer, filepath.Dir(dstPath), pipeReader, types.CopyToContainerOptions{})
+	return dockerClient.CopyToContainer(ctx, dstContainer, filepath.Dir(dstPath), pipeReader, types.CopyToContainerOptions{})
 }
 
 func addTarFile(filename string, file io.ReadCloser, tarWriter *tar.Writer, tarBuf *bufio.Writer) error {
