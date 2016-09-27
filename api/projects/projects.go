@@ -26,7 +26,7 @@ func Init(projects *echo.Group) {
 	projects.GET("/:id", show)
 	projects.POST("/create", create)
 	projects.DELETE("/:id", delete)
-	projects.POST("/submit", submit, dockerMiddleware(dockerClient))
+	projects.POST("/:id/submit", submit, dockerMiddleware(dockerClient))
 	projects.GET("/diff", diff)
 }
 
@@ -70,7 +70,7 @@ func show(c echo.Context) error {
 
 	id := c.Param("id")
 
-	project := db.Find(&models.Project{}, id)
+	project := db.Preload("Submissions").Find(&models.Project{}, id)
 	return c.JSON(http.StatusOK, project)
 }
 

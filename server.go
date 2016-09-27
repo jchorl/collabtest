@@ -33,6 +33,8 @@ func main() {
 
 	e.File("/", "static/index.html")
 	e.File("/new", "static/new.html")
+	e.File("/project", "static/project.html")
+	e.File("/submit", "static/submit.html")
 	e.Static("/static", "static")
 
 	apiRoutes := e.Group("/api")

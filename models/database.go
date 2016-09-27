@@ -23,3 +23,16 @@ func GetDB() (*gorm.DB, error) {
 	}
 	return db, nil
 }
+
+type Project struct {
+	gorm.Model
+	Name        string
+	Submissions []Submission
+}
+
+type Submission struct {
+	gorm.Model
+	ProjectID uint
+	Stdout    string
+	Stderr    string
+}
