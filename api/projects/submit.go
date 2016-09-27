@@ -17,9 +17,10 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
-	"github.com/jchorl/collabtest/constants"
 	"github.com/labstack/echo"
 	"github.com/sergi/go-diff/diffmatchpatch"
+
+	"github.com/jchorl/collabtest/constants"
 )
 
 func submit(c echo.Context) error {
