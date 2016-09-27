@@ -207,6 +207,10 @@
 			"Rev": "a887431f7f6ef7687b556dbf718d9f351d4858a0"
 		},
 		{
+			"ImportPath": "github.com/sergi/go-diff/diffmatchpatch",
+			"Rev": "ec7fdbb58eb3e300c8595ad5ac74a5aa50019cc7"
+		},
+		{
 			"ImportPath": "github.com/valyala/fasttemplate",
 			"Rev": "3b874956e03f1636d171bda64b130f9135f42cff"
 		},

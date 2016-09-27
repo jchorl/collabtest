@@ -27,6 +27,7 @@ func Init(projects *echo.Group) {
 	projects.POST("/create", create)
 	projects.DELETE("/:id", delete)
 	projects.POST("/submit", submit, dockerMiddleware(dockerClient))
+	projects.GET("/diff", diff)
 }
 
 func create(c echo.Context) error {
