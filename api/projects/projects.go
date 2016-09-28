@@ -11,6 +11,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 
 	"github.com/jchorl/collabtest/constants"
 	"github.com/jchorl/collabtest/models"
@@ -23,17 +24,22 @@ const (
 	charIdxMax  = 63 / charIdxBits   // # of char indices fitting in 63 bits
 )
 
-var src = rand.NewSource(time.Now().UnixNano())
+var (
+	src           = rand.NewSource(time.Now().UnixNano())
+	jwtMiddleware = middleware.JWTWithConfig(middleware.JWTConfig{
+		SigningKey:  []byte(constants.JWT_SECRET),
+		TokenLookup: "cookie:Authorization",
+	})
+)
 
 func Init(projects *echo.Group) {
-	projects.GET("", list)
-	projects.GET("/", list)
+	projects.GET("", list, jwtMiddleware)
+	projects.GET("/", list, jwtMiddleware)
 	projects.GET("/:hash", show)
-	projects.POST("/create", create)
-	projects.DELETE("/:hash", delete)
+	projects.POST("/create", create, jwtMiddleware)
+	projects.DELETE("/:hash", delete, jwtMiddleware)
 	projects.POST("/:hash/add", add)
 	projects.POST("/:hash/run", run)
-	projects.GET("/diff", diffSample)
 }
 
 func create(c echo.Context) error {

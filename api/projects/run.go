@@ -145,9 +145,9 @@ func run(c echo.Context) error {
 		defer logsReadCloser.Close()
 
 		runInstance := models.Run{
-			ProjectHash: hash,
-			Stdout:      logsBuffer.String()[8:],
-			Stderr:      "",
+			Project: models.Project{Hash: hash},
+			Stdout:  logsBuffer.String()[8:],
+			Stderr:  "",
 		}
 
 		db.Create(&runInstance)

@@ -16,6 +16,11 @@ const (
 	BUILD_MEMORY    = 52428800 // memory in bytes for build containers (50mb)
 
 	HASH_LENGTH = 8
+
+	GITHUB_CLIENT_ID     = "47ecbefcf49c1c3ce7d4"
+	GITHUB_CLIENT_SECRET = "02c1e09bca7d4f270f93852aecc5a4315f3c1822"
+
+	JWT_SECRET = "859742d8bfc747a4aa729291d710aace"
 )
 
 type defaultContainerConfig struct {
