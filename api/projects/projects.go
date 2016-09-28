@@ -2,7 +2,11 @@ package projects
 
 import (
 	"errors"
+	"math/rand"
 	"net/http"
+	"os"
+	"path"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
@@ -12,13 +16,23 @@ import (
 	"github.com/jchorl/collabtest/models"
 )
 
+const (
+	charBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	charIdxBits = 6                  // 6 bits to represent a char index
+	charIdxMask = 1<<charIdxBits - 1 // All 1-bits, as many as charIdxBits
+	charIdxMax  = 63 / charIdxBits   // # of char indices fitting in 63 bits
+)
+
+var src = rand.NewSource(time.Now().UnixNano())
+
 func Init(projects *echo.Group) {
 	projects.GET("", list)
 	projects.GET("/", list)
-	projects.GET("/:id", show)
+	projects.GET("/:hash", show)
 	projects.POST("/create", create)
-	projects.DELETE("/:id", delete)
-	projects.POST("/:id/submit", submit)
+	projects.DELETE("/:hash", delete)
+	projects.POST("/:hash/add", add)
+	projects.POST("/:hash/run", run)
 	projects.GET("/diff", diff)
 }
 
@@ -32,8 +46,15 @@ func create(c echo.Context) error {
 		return errors.New("Unable to get DB from context")
 	}
 
-	project := models.Project{Name: projectName}
+	hash := randomHash()
+	project := models.Project{Hash: hash, Name: projectName}
 	db.Create(&project)
+
+	// create a dir for the project
+	err := os.Mkdir(path.Join("projects", hash), 0700)
+	if err != nil {
+		logrus.WithError(err).Error("Created project but could not create project dir")
+	}
 
 	return c.String(http.StatusOK, "Created project: "+projectName)
 }
@@ -60,9 +81,9 @@ func show(c echo.Context) error {
 		return errors.New("Unable to get DB from context")
 	}
 
-	id := c.Param("id")
+	hash := c.Param("hash")
 
-	project := db.Preload("Submissions").Find(&models.Project{}, id)
+	project := db.Preload("Runs").Find(&models.Project{}, hash)
 	return c.JSON(http.StatusOK, project)
 }
 
@@ -75,9 +96,27 @@ func delete(c echo.Context) error {
 		return errors.New("Unable to get DB from context")
 	}
 
-	id := c.Param("id")
+	hash := c.Param("hash")
 
-	project := db.Find(&models.Project{}, id)
+	project := db.Find(&models.Project{}, hash)
 	db.Delete(&project)
 	return c.NoContent(http.StatusOK)
+}
+
+func randomHash() string {
+	b := make([]byte, constants.HASH_LENGTH)
+	// A src.Int63() generates 63 random bits, enough for charIdxMax characters!
+	for i, cache, remain := constants.HASH_LENGTH-1, src.Int63(), charIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), charIdxMax
+		}
+		if idx := int(cache & charIdxMask); idx < len(charBytes) {
+			b[i] = charBytes[idx]
+			i--
+		}
+		cache >>= charIdxBits
+		remain--
+	}
+
+	return string(b)
 }

@@ -26,13 +26,14 @@ func GetDB() (*gorm.DB, error) {
 
 type Project struct {
 	gorm.Model
-	Name        string
-	Submissions []Submission
+	Hash string `gorm:"primary_key"`
+	Name string
+	Runs []Run
 }
 
-type Submission struct {
+type Run struct {
 	gorm.Model
-	ProjectID uint
-	Stdout    string
-	Stderr    string
+	ProjectHash string
+	Stdout      string
+	Stderr      string
 }

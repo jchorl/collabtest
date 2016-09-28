@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
-	"strconv"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
@@ -26,12 +25,12 @@ import (
 	"github.com/jchorl/collabtest/models"
 )
 
-func submit(c echo.Context) error {
+func run(c echo.Context) error {
 	dockerClient, ok := c.Get(constants.CTX_DOCKER_CLIENT).(*client.Client)
 	if !ok {
 		logrus.WithFields(logrus.Fields{
 			"context": c,
-		}).Error("Unable to get docker client from context in project submit")
+		}).Error("Unable to get docker client from context in project test run")
 		return errors.New("Unable to get docker client from context")
 	}
 
@@ -91,22 +90,17 @@ func submit(c echo.Context) error {
 	}
 	defer logsReadCloser.Close()
 
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"id": c.Param("id"),
-		}).Error("Unable to convert id from str to int in project submit")
+	submission := models.Run{
+		ProjectHash: c.Param("hash"),
+		Stdout:      logsBuffer.String()[8:],
+		Stderr:      "",
 	}
-	submission := models.Submission{
-		ProjectID: uint(id),
-		Stdout:    logsBuffer.String()[8:],
-		Stderr:    "",
-	}
+
 	db, ok := c.Get(constants.CTX_DB).(*gorm.DB)
 	if !ok {
 		logrus.WithFields(logrus.Fields{
 			"context": c,
-		}).Error("Unable to get DB from context in project submit")
+		}).Error("Unable to get DB from context in project test run")
 		return errors.New("Unable to get DB from context")
 	}
 
