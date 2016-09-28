@@ -45,18 +45,9 @@ func submit(c echo.Context) error {
 	}
 	defer src.Close()
 
-	// cannot take address of const int
-	timeout := constants.BUILD_TIMEOUT
+	containerConfig := selectConfig(file.Filename)
 
-	// TODO actually select correct image
-	containerConfig := &container.Config{
-		Image:           "frolvlad/alpine-gcc",
-		WorkingDir:      "/build",
-		NetworkDisabled: true,
-		StopTimeout:     &timeout,
-		Cmd:             strslice.StrSlice{"sh", "-c", "g++ " + file.Filename + " && ./a.out"},
-	}
-
+	// TODO set ulimits in the host config
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
 		Resources: container.Resources{
@@ -65,7 +56,7 @@ func submit(c echo.Context) error {
 		},
 	}
 
-	createResponse, err := dockerClient.ContainerCreate(context.Background(), containerConfig, hostConfig, nil, "")
+	createResponse, err := dockerClient.ContainerCreate(context.Background(), &containerConfig, hostConfig, nil, "")
 	if err != nil {
 		logrus.WithError(err).Error("Could not create container")
 		return err
@@ -95,7 +86,9 @@ func submit(c echo.Context) error {
 	}
 	defer logsReadCloser.Close()
 
-	return c.String(http.StatusOK, logsBuffer.String())
+	// TODO: Figure out why an extra eight bytes are stored at the front of the buffer.
+	// \u0001 followed by seven \u0000.
+	return c.String(http.StatusOK, logsBuffer.String()[8:])
 }
 
 func copyToContainer(ctx context.Context, dockerClient *client.Client, file io.ReadCloser, dstContainer, dstPath string) (err error) {
@@ -194,4 +187,28 @@ func fileDiff(outpath string, exppath string) (string, error) {
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(out, exp, false)
 	return dmp.DiffPrettyHtml(diffs), nil
+}
+
+func selectConfig(srcpath string) container.Config {
+	var extension = filepath.Ext(srcpath)
+	logrus.Info(extension)
+
+	timeout := constants.BUILD_TIMEOUT
+
+	config := container.Config{
+		WorkingDir:      "/build",
+		NetworkDisabled: true,
+		StopTimeout:     &timeout,
+	}
+
+	switch extension {
+	case ".cxx", ".cpp":
+		config.Image = "frolvlad/alpine-gcc:latest"
+		config.Cmd = strslice.StrSlice{"sh", "-c", "g++ " + srcpath + " && ./a.out"}
+	case ".java":
+		config.Image = "openjdk:8-alpine"
+		config.Cmd = strslice.StrSlice{"sh", "-c", "javac " + srcpath + " && java Solution"}
+	}
+
+	return config
 }
