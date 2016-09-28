@@ -1,4 +1,4 @@
-.PHONY: all build clean run network db dev run-dev
+.PHONY: all build clean run network db dev run-dev ui ui-dev
 
 DOMAIN ?= localhost
 PORT ?= 4443
@@ -7,8 +7,8 @@ DB_PORT ?= 5432
 DB_USER ?= collabtest
 DB_PASSWORD ?= collabtest
 
-all: clean network db build run
-dev: clean network db build run-dev
+all: clean network db ui build run
+dev: clean network db ui build run-dev
 
 build:
 	docker build -t collabtest/collabtest .
@@ -19,6 +19,12 @@ clean:
 
 network:
 	docker network create collabtest-network
+
+ui:
+	docker run --rm --name collabtestui -it -v $(PWD)/ui:/usr/src/app -w /usr/src/app node:latest /bin/bash -c "npm install; npm run build"
+
+ui-dev:
+	docker run --rm --name collabtestui -it -p 3000:3000 -v $(PWD)/ui:/usr/src/app -w /usr/src/app node:latest /bin/bash -c "npm install; npm start"
 
 run:
 	docker run \

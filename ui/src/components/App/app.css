@@ -1,0 +1,13 @@
+/*
+ * colors:
+ * background gray: #f0f0f0
+ * text gray: #5a5a5a
+ * light blue: #cbeaf1
+ */
+
+body {
+  margin: 0;
+  color: #5a5a5a;
+  background-color: #f0f0f0;
+  font-family: 'Inconsolata', monospace;
+}

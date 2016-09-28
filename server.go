@@ -70,11 +70,8 @@ func main() {
 		middleware.BodyLimit("5M"),
 	)
 
-	e.File("/", "static/index.html")
-	e.File("/new", "static/new.html")
-	e.File("/project", "static/project.html")
-	e.File("/submit", "static/submit.html")
-	e.Static("/static", "static")
+	e.File("/", "ui/build/index.html")
+	e.Static("/static", "ui/build/static")
 
 	apiRoutes := e.Group("/api")
 	api.Init(apiRoutes)
