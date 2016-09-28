@@ -1,6 +1,7 @@
 package constants
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/docker/docker/api/types/strslice"
@@ -50,4 +51,6 @@ var (
 			command: "javac %s && java Solution",
 		},
 	}
+
+	UNRECOGNIZED_HASH = errors.New("The provided hash could not be found")
 )

@@ -33,7 +33,7 @@ func Init(projects *echo.Group) {
 	projects.DELETE("/:hash", delete)
 	projects.POST("/:hash/add", add)
 	projects.POST("/:hash/run", run)
-	projects.GET("/diff", diff)
+	projects.GET("/diff", diffSample)
 }
 
 func create(c echo.Context) error {

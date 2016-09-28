@@ -3,16 +3,35 @@ package projects
 import (
 	"bytes"
 	"crypto/md5"
+	"errors"
 	"io"
 	"os"
 	"path"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
+
+	"github.com/jchorl/collabtest/constants"
+	"github.com/jchorl/collabtest/models"
 )
 
 func add(c echo.Context) error {
+	db, ok := c.Get(constants.CTX_DB).(*gorm.DB)
+	if !ok {
+		logrus.WithFields(logrus.Fields{
+			"context": c,
+		}).Error("Unable to get DB from context in project test add")
+		return errors.New("Unable to get DB from context")
+	}
+
 	hash := c.Param("hash")
+
+	// validate that hash is in the db
+	if db.First(&models.Project{}, hash).RecordNotFound() {
+		return constants.UNRECOGNIZED_HASH
+	}
+
 	dir := path.Join("projects", hash)
 
 	inFile, err := c.FormFile("inFile")
