@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/docker/client"
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
 
@@ -13,20 +12,13 @@ import (
 	"github.com/jchorl/collabtest/models"
 )
 
-var dockerEngineHeaders = map[string]string{"User-Agent": "engine-api-cli-1.0"}
-
 func Init(projects *echo.Group) {
-	dockerClient, err := client.NewClient("unix:///var/run/docker.sock", "v1.22", nil, dockerEngineHeaders)
-	if err != nil {
-		logrus.WithError(err).Fatal("Could not create docker client")
-	}
-
 	projects.GET("", list)
 	projects.GET("/", list)
 	projects.GET("/:id", show)
 	projects.POST("/create", create)
 	projects.DELETE("/:id", delete)
-	projects.POST("/submit", submit, dockerMiddleware(dockerClient))
+	projects.POST("/submit", submit)
 	projects.GET("/diff", diff)
 }
 
@@ -88,13 +80,4 @@ func delete(c echo.Context) error {
 	project := db.Find(&models.Project{}, id)
 	db.Delete(&project)
 	return c.NoContent(http.StatusOK)
-}
-
-func dockerMiddleware(dockerClient *client.Client) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			c.Set(constants.CTX_DOCKER_CLIENT, dockerClient)
-			return next(c)
-		}
-	}
 }

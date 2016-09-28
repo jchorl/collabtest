@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,7 +16,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
 	"github.com/labstack/echo"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -45,9 +45,11 @@ func submit(c echo.Context) error {
 	}
 	defer src.Close()
 
-	containerConfig := selectConfig(file.Filename)
+	containerConfig, err := selectConfig(file.Filename)
+	if err != nil {
+		return err
+	}
 
-	// TODO set ulimits in the host config
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
 		Resources: container.Resources{
@@ -165,7 +167,7 @@ func diff(c echo.Context) error {
 		logrus.WithError(err).Error("Error computing file diff.")
 		return err
 	}
-	logrus.Info(diff)
+	logrus.Debug(diff)
 	return c.HTML(http.StatusOK, diff)
 }
 
@@ -189,9 +191,9 @@ func fileDiff(outpath string, exppath string) (string, error) {
 	return dmp.DiffPrettyHtml(diffs), nil
 }
 
-func selectConfig(srcpath string) container.Config {
+func selectConfig(srcpath string) (container.Config, error) {
 	var extension = filepath.Ext(srcpath)
-	logrus.Info(extension)
+	logrus.Debug(extension)
 
 	timeout := constants.BUILD_TIMEOUT
 
@@ -201,14 +203,14 @@ func selectConfig(srcpath string) container.Config {
 		StopTimeout:     &timeout,
 	}
 
-	switch extension {
-	case ".cxx", ".cpp":
-		config.Image = "frolvlad/alpine-gcc:latest"
-		config.Cmd = strslice.StrSlice{"sh", "-c", "g++ " + srcpath + " && ./a.out"}
-	case ".java":
-		config.Image = "openjdk:8-alpine"
-		config.Cmd = strslice.StrSlice{"sh", "-c", "javac " + srcpath + " && java Solution"}
+	defaults, ok := constants.FILETYPE_CONFIGS["extension"]
+	if !ok {
+		logrus.WithField("extension", extension).Error("Attempting to run file with unknown extension")
+		return container.Config{}, fmt.Errorf("Unsupported file extension: %s", extension)
 	}
 
-	return config
+	config.Image = defaults.Image()
+	config.Cmd = defaults.Command(srcpath)
+
+	return config, nil
 }
