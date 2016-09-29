@@ -24,7 +24,7 @@ ui:
 	docker run --rm --name collabtestui -it -v $(PWD)/ui:/usr/src/app -w /usr/src/app node:latest /bin/bash -c "npm install; npm run build"
 
 ui-dev:
-	docker run --rm --name collabtestui -it -p 3000:3000 -v $(PWD)/ui:/usr/src/app -w /usr/src/app node:latest /bin/bash -c "npm install; npm start"
+	docker run --rm --name collabtestui -it --network collabtest-network -p 3000:3000 -v $(PWD)/ui:/usr/src/app -w /usr/src/app node:latest /bin/bash -c "npm install; HTTPS=true npm start"
 
 run:
 	docker run \
@@ -44,6 +44,7 @@ run-dev:
 		-p $(PORT):$(PORT) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $(PWD):/go/src/github.com/jchorl/collabtest \
+		-h collabtest \
 		--name collabtest \
 		--network collabtest-network \
 		-e DEV=1 \

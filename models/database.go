@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
@@ -25,11 +26,13 @@ func GetDB() (*gorm.DB, error) {
 }
 
 type Project struct {
-	gorm.Model
-	User User
-	Hash string `gorm:"primary_key"`
-	Name string
-	Runs []Run
+	UserId    uint       `json:"-"`
+	Hash      string     `gorm:"primary_key" json:"hash"`
+	Name      string     `json:"name"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
+	DeletedAt *time.Time `json:"-"`
+	Runs      []Run      `json:"-"`
 }
 
 type Run struct {

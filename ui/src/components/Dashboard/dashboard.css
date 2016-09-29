@@ -1,0 +1,15 @@
+.dashboard {
+  display: flex;
+}
+
+.dashboard .dashboard-content-container {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.dashboard .dashboard-content-container .dashboard-content {
+  flex-grow: 1;
+  max-width: 500px;
+  margin: 30px;
+}

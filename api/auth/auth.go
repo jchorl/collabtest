@@ -12,9 +12,17 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 
 	"github.com/jchorl/collabtest/constants"
 	"github.com/jchorl/collabtest/models"
+)
+
+var (
+	jwtMiddleware = middleware.JWTWithConfig(middleware.JWTConfig{
+		SigningKey:  []byte(constants.JWT_SECRET),
+		TokenLookup: "cookie:Authorization",
+	})
 )
 
 type githubAuthResponse struct {
@@ -28,6 +36,7 @@ type githubUserInfo struct {
 
 func Init(auth *echo.Group) {
 	auth.GET("/login", login)
+	auth.GET("/loggedIn", loggedIn, jwtMiddleware)
 }
 
 func login(c echo.Context) error {
@@ -145,14 +154,24 @@ func login(c echo.Context) error {
 	cookie := new(echo.Cookie)
 	cookie.SetName("Authorization")
 	cookie.SetValue(t)
-	c.SetCookie(cookie)
+	cookie.SetHTTPOnly(true)
+	cookie.SetSecure(true)
+	cookie.SetPath("/")
 
 	redir := "https://" + os.Getenv("DOMAIN")
 	if os.Getenv("DEV") != "" {
+		cookie.SetDomain("localhost")
 		redir = redir + ":" + os.Getenv("PORT")
 	}
+
+	c.SetCookie(cookie)
 
 	logrus.WithField("redir", redir).Debug("redirecting to")
 
 	return c.Redirect(http.StatusFound, redir)
+}
+
+// there is a middleware in front to make sure the user is logged in
+func loggedIn(c echo.Context) error {
+	return nil
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -34,16 +35,22 @@ var (
 
 func Init(projects *echo.Group) {
 	projects.GET("", list, jwtMiddleware)
-	projects.GET("/", list, jwtMiddleware)
+	projects.POST("", create, jwtMiddleware)
 	projects.GET("/:hash", show)
-	projects.POST("/create", create, jwtMiddleware)
 	projects.DELETE("/:hash", delete, jwtMiddleware)
 	projects.POST("/:hash/add", add)
 	projects.POST("/:hash/run", run)
 }
 
 func create(c echo.Context) error {
-	projectName := c.FormValue("name")
+	project := models.Project{}
+	if err := c.Bind(&project); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"context": c,
+			"error":   err,
+		}).Error("Unable to decode project in project create")
+	}
+
 	db, ok := c.Get(constants.CTX_DB).(*gorm.DB)
 	if !ok {
 		logrus.WithFields(logrus.Fields{
@@ -52,17 +59,38 @@ func create(c echo.Context) error {
 		return errors.New("Unable to get DB from context")
 	}
 
+	user, ok := c.Get("user").(*jwt.Token)
+	if !ok {
+		logrus.WithFields(logrus.Fields{
+			"context": c,
+		}).Error("Unable to get user from context in project list")
+		return errors.New("Unable to get user from context")
+	}
+
+	claims := user.Claims.(jwt.MapClaims)
+	userIdF := claims["sub"].(float64)
+	userId := uint(userIdF)
+
 	hash := randomHash()
-	project := models.Project{Hash: hash, Name: projectName}
-	db.Create(&project)
+	project.Hash = hash
+	project.UserId = userId
+	result := db.Create(&project)
+	if result.Error != nil {
+		logrus.WithFields(logrus.Fields{
+			"error":   result.Error,
+			"project": project,
+		}).Error("Unable to insert new project into db")
+		return result.Error
+	}
 
 	// create a dir for the project
+	// dont fail on this, try again on file upload and fail on that
 	err := os.Mkdir(path.Join("projects", hash), 0700)
 	if err != nil {
 		logrus.WithError(err).Error("Created project but could not create project dir")
 	}
 
-	return c.String(http.StatusOK, "Created project: "+projectName)
+	return c.JSON(http.StatusOK, project)
 }
 
 func list(c echo.Context) error {
@@ -74,8 +102,26 @@ func list(c echo.Context) error {
 		return errors.New("Unable to get DB from context")
 	}
 
-	projects := db.Find(&[]models.Project{})
-	return c.JSON(http.StatusOK, projects)
+	user, ok := c.Get("user").(*jwt.Token)
+	if !ok {
+		logrus.WithFields(logrus.Fields{
+			"context": c,
+		}).Error("Unable to get user from context in project list")
+		return errors.New("Unable to get user from context")
+	}
+
+	claims := user.Claims.(jwt.MapClaims)
+	userIdF := claims["sub"].(float64)
+	_ = uint(userIdF)
+
+	// TODO figure out how to query for the projects that a user owns
+	// for now, just return all projects
+	result := db.Find(&[]models.Project{})
+	if result.Error != nil {
+		logrus.WithError(result.Error).Error("Error querying for projects in project list")
+		return result.Error
+	}
+	return c.JSON(http.StatusOK, result.Value)
 }
 
 func show(c echo.Context) error {
