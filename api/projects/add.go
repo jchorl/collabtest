@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"crypto/md5"
 	"errors"
+	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path"
 
@@ -28,7 +30,8 @@ func add(c echo.Context) error {
 	hash := c.Param("hash")
 
 	// validate that hash is in the db
-	if db.First(&models.Project{}, hash).RecordNotFound() {
+	if db.First(&models.Project{Hash: hash}).RecordNotFound() {
+		logrus.Error("Unable to find hash in db when uploading test cases")
 		return constants.UNRECOGNIZED_HASH
 	}
 
@@ -36,11 +39,19 @@ func add(c echo.Context) error {
 
 	inFile, err := c.FormFile("inFile")
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error":   err,
+			"context": c,
+		}).Error("Unable to get inFile")
 		return err
 	}
 
 	outFile, err := c.FormFile("outFile")
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error":   err,
+			"context": c,
+		}).Error("Unable to get outFile")
 		return err
 	}
 
@@ -51,6 +62,10 @@ func add(c echo.Context) error {
 
 	inFileReader, err := inFile.Open()
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error":   err,
+			"context": c,
+		}).Error("unable to open in file")
 		return err
 	}
 	defer inFileReader.Close()
@@ -62,10 +77,15 @@ func add(c echo.Context) error {
 		return err
 	}
 
-	filenameBase := string(inFileHash.Sum(nil))
+	// TODO figure out how to better decode the checksum
+	filenameBase := string(fmt.Sprintf("%x", inFileHash.Sum(nil)))
 
 	inFileWriter, err := os.Create(path.Join(dir, filenameBase+".in"))
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error":    err,
+			"filename": path.Join(dir, filenameBase+".in"),
+		}).Error("unable to open in file writer when uploading test case")
 		return err
 	}
 	defer inFileWriter.Close()
@@ -81,12 +101,20 @@ func add(c echo.Context) error {
 
 	outFileReader, err := outFile.Open()
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error":   err,
+			"context": c,
+		}).Error("unable to open out file")
 		return err
 	}
 	defer outFileReader.Close()
 
 	outFileWriter, err := os.Create(path.Join(dir, filenameBase+".out"))
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error":    err,
+			"filename": path.Join(dir, filenameBase+".in"),
+		}).Error("unable to open out file writer when uploading test case")
 		return err
 	}
 	defer outFileWriter.Close()
@@ -100,5 +128,5 @@ func add(c echo.Context) error {
 		return err
 	}
 
-	return nil
+	return c.NoContent(http.StatusAccepted)
 }

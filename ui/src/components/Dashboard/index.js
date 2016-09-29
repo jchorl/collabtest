@@ -5,6 +5,7 @@ import { fetchProjects, createProject } from '../../actions';
 import CreateProject from '../CreateProject';
 import ProjectsBar from '../ProjectsBar';
 import ProjectInfo from '../ProjectInfo';
+import TestCaseUpload from '../TestCaseUpload';
 
 import './dashboard.css';
 
@@ -71,7 +72,8 @@ class Dashboard extends Component {
                         ) : (
                             <div className="project-overview">
                                 <div className={ `project-info-upload column` }>
-                                    <ProjectInfo selected={ selected } />
+                                    <ProjectInfo hash={ selected } />
+                                    <TestCaseUpload hash={ selected } />
                                 </div>
                                 <div className={ `column` }>Run</div>
                             </div>

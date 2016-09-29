@@ -1,16 +1,22 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
+import { list } from 'react-immutable-proptypes';
 
 import './project-info.css';
 
 class ProjectInfo extends Component {
+    static propTypes = {
+        projects: list,
+        hash: React.PropTypes.string.isRequired
+    };
+
     // consider caching the selected project in state
     render() {
         const {
-            selected,
+            hash,
             projects
         } = this.props;
-        let proj = projects.find(p => p.get('hash') === selected);
+        let proj = projects.find(p => p.get('hash') === hash);
         let link = `${location.protocol}//${location.hostname}${location.port ? ':' + location.port : ''}/projects/${proj.get('hash')}`;
         return (
             <div className="project-info">

@@ -3,6 +3,8 @@ export const RECEIVE_AUTH = 'RECEIVE_AUTH';
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS';
 export const RECEIVE_PROJECTS = 'RECEIVE_PROJECTS';
 export const PROJECT_CREATED = 'PROJECT_CREATED';
+export const UPLOAD_TEST_CASES = 'UPLOAD_TEST_CASES';
+export const UPLOAD_TEST_CASES_COMPLETE = 'UPLOAD_TEST_CASES_COMPLETE';
 
 function requestAuth() {
     return { type: REQUEST_AUTH };
@@ -64,5 +66,37 @@ export function createProject(project) {
         })
             .then(resp => resp.json())
             .then(parsed => dispatch(projectCreated(parsed)));
+    }
+}
+
+function uploadTestCasesCompleted() {
+    return {
+        type: UPLOAD_TEST_CASES_COMPLETE
+    }
+}
+
+function beginUploadTestCases() {
+    return {
+        type: UPLOAD_TEST_CASES
+    }
+}
+
+export function uploadTestCases(hash, files) {
+    return dispatch => {
+        dispatch(beginUploadTestCases());
+        let data = new FormData();
+        data.append('inFile', files[0]);
+        data.append('outFile', files[1]);
+
+        fetch(`/api/projects/${hash}/add`, {
+            credentials: 'include',
+            method: 'POST',
+            body: data
+        })
+        .then(resp => {
+            if (resp.status === 202) {
+                dispatch(uploadTestCasesCompleted());
+            }
+        });
     }
 }

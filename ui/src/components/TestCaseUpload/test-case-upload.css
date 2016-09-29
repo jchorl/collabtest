@@ -1,0 +1,13 @@
+.test-case-upload {
+  margin-top: 20px;
+  overflow: hidden;
+  background: #cbeaf1;
+  padding: 0 20px 20px;
+}
+
+.test-case-upload .dropzone {
+  border: 1px dashed #5a5a5a;
+  border-radius: 4px;
+  min-height: 80px;
+  padding: 10px;
+}
