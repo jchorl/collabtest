@@ -9,7 +9,7 @@ import './test-case-upload.css';
 class TestCaseUpload extends Component {
     static propTypes = {
         hash: React.PropTypes.string.isRequired,
-        testCaseUpload: map
+        uploadTestCases: map
     };
 
     constructor(props) {

@@ -2,7 +2,7 @@ import Immutable from 'immutable';
 
 import { UPLOAD_TEST_CASES, UPLOAD_TEST_CASES_COMPLETE } from '../actions';
 
-export default function auth(state = Immutable.Map({
+export default function uploadTestCases(state = Immutable.Map({
     success: false
 }), action) {
     switch (action.type) {

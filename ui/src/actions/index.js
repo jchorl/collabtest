@@ -5,6 +5,8 @@ export const RECEIVE_PROJECTS = 'RECEIVE_PROJECTS';
 export const PROJECT_CREATED = 'PROJECT_CREATED';
 export const UPLOAD_TEST_CASES = 'UPLOAD_TEST_CASES';
 export const UPLOAD_TEST_CASES_COMPLETE = 'UPLOAD_TEST_CASES_COMPLETE';
+export const RUN_TEST_CASES = 'RUN_TEST_CASES';
+export const RUN_TEST_CASES_COMPLETE = 'RUN_TEST_CASES_COMPLETE';
 
 function requestAuth() {
     return { type: REQUEST_AUTH };
@@ -98,5 +100,35 @@ export function uploadTestCases(hash, files) {
                 dispatch(uploadTestCasesCompleted());
             }
         });
+    }
+}
+
+function runTestCasesCompleted(hash, results) {
+    return {
+        type: RUN_TEST_CASES_COMPLETE,
+        hash,
+        results
+    }
+}
+
+function beginRunTestCases() {
+    return {
+        type: RUN_TEST_CASES
+    }
+}
+
+export function runTestCases(hash, file) {
+    return dispatch => {
+        dispatch(beginRunTestCases());
+        let data = new FormData();
+        data.append('file', file);
+
+        fetch(`/api/projects/${hash}/run`, {
+            credentials: 'include',
+            method: 'POST',
+            body: data
+        })
+        .then(resp => resp.json())
+        .then(parsed => dispatch(runTestCasesCompleted(hash, parsed)));
     }
 }

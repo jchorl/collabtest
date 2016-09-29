@@ -6,6 +6,7 @@ import CreateProject from '../CreateProject';
 import ProjectsBar from '../ProjectsBar';
 import ProjectInfo from '../ProjectInfo';
 import TestCaseUpload from '../TestCaseUpload';
+import TestCaseRun from '../TestCaseRun';
 
 import './dashboard.css';
 
@@ -75,7 +76,9 @@ class Dashboard extends Component {
                                     <ProjectInfo hash={ selected } />
                                     <TestCaseUpload hash={ selected } />
                                 </div>
-                                <div className={ `column` }>Run</div>
+                                <div className={ `column` }>
+                                    <TestCaseRun hash={ selected } />
+                                </div>
                             </div>
                         )
                     }

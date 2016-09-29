@@ -39,7 +39,7 @@ func run(c echo.Context) error {
 	hash := c.Param("hash")
 
 	// verify that the proj exists
-	if db.First(&models.Project{}, hash).RecordNotFound() {
+	if db.First(&models.Project{Hash: hash}).RecordNotFound() {
 		return constants.UNRECOGNIZED_HASH
 	}
 
@@ -152,13 +152,14 @@ func run(c echo.Context) error {
 
 		db.Create(&runInstance)
 
+		expectedOutFilename := testFile.Name()[0:len(testFile.Name())-len(filepath.Ext(testFile.Name()))] + ".out" // disgusting way of removing extension. TODO improve.
 		// open expected
-		testFileOutputReader, err := os.Open(path.Join("projects", hash, filepath.Base(testFile.Name())+".out"))
+		testFileOutputReader, err := os.Open(path.Join("projects", hash, expectedOutFilename))
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"error": err,
 				"hash":  hash,
-				"file":  path.Join("projects", hash, filepath.Base(testFile.Name())+".out"),
+				"file":  path.Join("projects", hash, expectedOutFilename),
 			}).Error("unable to open test output file while running tests")
 			continue
 		}
@@ -293,7 +294,7 @@ func selectConfig(srcpath string) (container.Config, error) {
 		StopTimeout:     &timeout,
 	}
 
-	defaults, ok := constants.FILETYPE_CONFIGS["extension"]
+	defaults, ok := constants.FILETYPE_CONFIGS[extension]
 	if !ok {
 		logrus.WithField("extension", extension).Error("Attempting to run file with unknown extension")
 		return container.Config{}, fmt.Errorf("Unsupported file extension: %s", extension)

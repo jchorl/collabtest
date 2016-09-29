@@ -70,6 +70,7 @@ func add(c echo.Context) error {
 	}
 	defer inFileReader.Close()
 
+	// TODO accept emtpy files, currently the md5 bombs
 	inFileReaderTee := io.TeeReader(inFileReader, inFileHash)
 	var inBts []byte
 	if _, err := inFileReaderTee.Read(inBts); err != nil {
