@@ -2,14 +2,20 @@
   display: flex;
 }
 
-.dashboard .dashboard-content-container {
+.dashboard .dashboard-content {
   flex-grow: 1;
   display: flex;
   justify-content: center;
 }
 
-.dashboard .dashboard-content-container .dashboard-content {
+.dashboard .dashboard-content .project-overview {
   flex-grow: 1;
-  max-width: 500px;
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+}
+
+.dashboard .dashboard-content .project-overview .column {
+  flex-grow: 1;
   margin: 30px;
 }

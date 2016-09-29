@@ -22,3 +22,13 @@ body {
   color: inherit;
   font-family: inherit;
 }
+
+a {
+  text-decoration: none;
+  color: inherit;
+  font-family: inherit;
+}
+
+a:hover {
+  text-decoration: underline;
+}

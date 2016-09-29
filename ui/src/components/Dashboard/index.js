@@ -2,8 +2,9 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux'
 import { mapContains } from 'react-immutable-proptypes';
 import { fetchProjects, createProject } from '../../actions';
-import ProjectsBar from '../ProjectsBar';
 import CreateProject from '../CreateProject';
+import ProjectsBar from '../ProjectsBar';
+import ProjectInfo from '../ProjectInfo';
 
 import './dashboard.css';
 
@@ -63,14 +64,19 @@ class Dashboard extends Component {
         return this.props.auth.get('authd') && this.props.projects.get('fetched') ? (
             <div className="dashboard">
                 <ProjectsBar selected={ selected } onProjectSelect={ this.onProjectSelect } />
-                <div className="dashboard-content-container">
-                    <div className="dashboard-content">
-                        {
-                            selected === '' ? (
-                                <CreateProject onSubmit={ this.newProject } />
-                            ) : null
-                        }
-                    </div>
+                <div className="dashboard-content">
+                    {
+                        selected === '' ? (
+                            <CreateProject onSubmit={ this.newProject } />
+                        ) : (
+                            <div className="project-overview">
+                                <div className={ `project-info-upload column` }>
+                                    <ProjectInfo selected={ selected } />
+                                </div>
+                                <div className={ `column` }>Run</div>
+                            </div>
+                        )
+                    }
                 </div>
             </div>
         ) : null;
