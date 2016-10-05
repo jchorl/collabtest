@@ -14,7 +14,7 @@ build:
 	docker build -t collabtest/collabtest .
 
 clean:
-	-docker rm -f collabtest collabtestdb 2> /dev/null
+	-docker rm -f collabtest collabtestdb collabtestui 2> /dev/null
 	-docker network rm collabtest-network
 
 network:
@@ -39,6 +39,7 @@ run:
 		-e POSTGRES_DOMAIN=$(DB_DOMAIN) \
 		-e POSTGRES_PORT=$(DB_PORT) \
 		collabtest/collabtest
+
 run-dev:
 	docker run -it --rm \
 		-p $(PORT):$(PORT) \
@@ -56,6 +57,6 @@ run-dev:
 		-e POSTGRES_PORT=$(DB_PORT) \
 		collabtest/collabtest
 
-db: 
+db:
 	docker run --name collabtestdb --expose=$(DB_PORT) -v $(PWD)/sql:/docker-entrypoint-initdb.d -h collabtestdb --network collabtest-network -e POSTGRES_USER=collabtest -e POSTGRES_PASSWORD=collabtest -d postgres
 	sleep 5
