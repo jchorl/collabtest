@@ -1,0 +1,15 @@
+.projects-bar {
+  max-width: 300px;
+  width: 100%;
+}
+
+.projects-bar > .project {
+  padding: 20px 30px;
+  background-color: #cbeaf1;
+  cursor: pointer;
+}
+
+.projects-bar > .project.selected {
+  background-color: #5a5a5a;
+  color: #f0f0f0;
+}
