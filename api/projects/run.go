@@ -144,9 +144,12 @@ func run(c echo.Context) error {
 		}
 		defer logsReadCloser.Close()
 
+		// docker prepends 8 bytes of info: see HEADER at https://docs.docker.com/v1.6/reference/api/docker_remote_api_v1.14/
+		logsBuffer.Next(8)
+
 		runInstance := models.Run{
 			Project: models.Project{Hash: hash},
-			Stdout:  logsBuffer.String()[8:],
+			Stdout:  logsBuffer.String(),
 			Stderr:  "",
 		}
 
@@ -276,6 +279,11 @@ func diff(in1, in2 io.Reader) (string, error) {
 	buf.Reset()
 	buf.ReadFrom(in2)
 	str2 := buf.String()
+
+	logrus.WithFields(logrus.Fields{
+		"str1": str1,
+		"str2": str2,
+	}).Debug("diffing")
 
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(str1, str2, false)
