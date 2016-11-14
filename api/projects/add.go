@@ -71,10 +71,9 @@ func add(c echo.Context) error {
 	defer inFileReader.Close()
 
 	// TODO accept emtpy files, currently the md5 bombs
-	inFileReaderTee := io.TeeReader(inFileReader, inFileHash)
-	var inBts []byte
-	if _, err := inFileReaderTee.Read(inBts); err != nil {
-		logrus.WithError(err).Error("Error reading uploaded test case to md5 hasher and byte slice")
+	var inBuf bytes.Buffer
+	if _, err := io.Copy(&inBuf, io.TeeReader(inFileReader, inFileHash)); err != nil {
+		logrus.WithError(err).Error("Error reading uploaded test case to md5 hasher and buffer")
 		return err
 	}
 
@@ -91,7 +90,7 @@ func add(c echo.Context) error {
 	}
 	defer inFileWriter.Close()
 
-	if _, err = io.Copy(inFileWriter, bytes.NewReader(inBts)); err != nil {
+	if _, err = io.Copy(inFileWriter, &inBuf); err != nil {
 		logrus.WithFields(logrus.Fields{
 			"hash":     hash,
 			"filename": path.Join(dir, filenameBase+".in"),

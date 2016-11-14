@@ -70,7 +70,7 @@ func run(c echo.Context) error {
 	}
 
 	// make sure the cmd pipes in the test input
-	containerConfig.Cmd = append(containerConfig.Cmd, "<", "testIn")
+	containerConfig.Cmd[len(containerConfig.Cmd)-1] = containerConfig.Cmd[len(containerConfig.Cmd)-1] + " < testIn"
 
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
