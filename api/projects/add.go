@@ -70,7 +70,6 @@ func add(c echo.Context) error {
 	}
 	defer inFileReader.Close()
 
-	// TODO accept emtpy files, currently the md5 bombs
 	var inBuf bytes.Buffer
 	if _, err := io.Copy(&inBuf, io.TeeReader(inFileReader, inFileHash)); err != nil {
 		logrus.WithError(err).Error("Error reading uploaded test case to md5 hasher and buffer")
