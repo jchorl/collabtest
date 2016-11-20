@@ -47,7 +47,7 @@ func Init(projects *echo.Group) {
 	projects.GET("/:hash", show)
 	projects.GET("/:hash/testcases", listTestcases)
 	projects.GET("/:hash/testcases/:filename", getTestcase)
-	projects.DELETE("/:hash", delete, jwtMiddleware)
+	projects.DELETE("/:hash", deleteProject, jwtMiddleware)
 	projects.POST("/:hash/add", add)
 	projects.POST("/:hash/run", run)
 }
@@ -214,11 +214,11 @@ func show(c echo.Context) error {
 
 	hash := c.Param("hash")
 
-	project := db.Preload("Runs").Find(&models.Project{}, hash)
-	return c.JSON(http.StatusOK, project)
+	result := db.First(&models.Project{Hash: hash})
+	return c.JSON(http.StatusOK, result.Value)
 }
 
-func delete(c echo.Context) error {
+func deleteProject(c echo.Context) error {
 	db, ok := c.Get(constants.CTX_DB).(*gorm.DB)
 	if !ok {
 		logrus.WithFields(logrus.Fields{

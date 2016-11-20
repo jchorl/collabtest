@@ -109,6 +109,12 @@ func run(c echo.Context) error {
 			return err
 		}
 
+		_, err = testProgramReader.Seek(0, io.SeekStart)
+		if err != nil {
+			logrus.WithError(err).Error("Could not seek to start of program reader")
+			return err
+		}
+
 		testFileReader, err := os.Open(path.Join("projects", hash, testFile.Name()))
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
@@ -177,8 +183,6 @@ func run(c echo.Context) error {
 		diffs = append(diffs, d)
 	}
 
-	// TODO: Figure out why an extra eight bytes are stored at the front of the buffer.
-	// \u0001 followed by seven \u0000.
 	return c.JSON(http.StatusOK, diffs)
 }
 

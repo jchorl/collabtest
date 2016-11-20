@@ -7,15 +7,3 @@
   display: flex;
   justify-content: center;
 }
-
-.dashboard .dashboard-content .project-overview {
-  flex-grow: 1;
-  display: flex;
-  justify-content: space-around;
-  align-items: stretch;
-}
-
-.dashboard .dashboard-content .project-overview .column {
-  flex-grow: 1;
-  margin: 30px;
-}
