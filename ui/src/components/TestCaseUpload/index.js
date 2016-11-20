@@ -2,59 +2,95 @@ import React, { Component } from 'react';
 import { map } from 'react-immutable-proptypes';
 import { connect } from 'react-redux';
 import Dropzone from 'react-dropzone';
-import { uploadTestCases } from '../../actions';
+import { uploadTestCase } from '../../actions';
 
 import './test-case-upload.css';
 
 class TestCaseUpload extends Component {
-    static propTypes = {
-        hash: React.PropTypes.string.isRequired,
-        uploadTestCases: map
-    };
+  static propTypes = {
+    hash: React.PropTypes.string.isRequired,
+    uploadTestCase: map
+  };
 
-    constructor(props) {
-        super(props);
-        this.state = { files: [] };
+  constructor(props) {
+    super(props);
+    this.state = { input: null, output: null };
+  }
+
+  componentWillReceiveProps(nextProps) {
+    if (!this.props.uploadTestCase.get('success') && nextProps.uploadTestCase.get('success')) {
+      alert('Success!');
+      this.setState({ input: null, output: null });
     }
+  }
 
-    componentWillReceiveProps(nextProps) {
-        // TODO should keep track of what got uploaded, multiple uploads, etc
-        if (!this.props.uploadTestCases.get('success') && nextProps.uploadTestCases.get('success')) {
-            alert('Success!');
-            this.setState({ files: [] });
-        }
+  onDropInput = files => {
+    const {
+      hash,
+      dispatch
+    } = this.props;
+
+    if (this.state.output) {
+      dispatch(uploadTestCase(hash, files[0], this.state.output));
+    } else {
+      this.setState({ input: files[0] });
     }
+  }
 
-    onDrop = files => {
-        const {
-            hash,
-            dispatch
-        } = this.props;
+  onDropOutput = files => {
+    const {
+      hash,
+      dispatch
+    } = this.props;
 
-        // TODO no
-        if (this.state.files.length === 1) {
-            dispatch(uploadTestCases(hash, this.state.files.concat(files)));
-        } else {
-            this.setState({ files: this.state.files.concat(files) });
-        }
+    if (this.state.input) {
+      dispatch(uploadTestCase(hash, this.state.input, files[0]));
+    } else {
+      this.setState({ output: files[0] });
     }
+  }
 
-    // TODO consider caching the selected project in state
-    // TODO make this not terrible
-    render() {
-        return (
-            <div className="test-case-upload">
-                <h2>Submit new test case</h2>
-                <Dropzone className="dropzone" onDrop={ this.onDrop }>
-                    <div>Please drop input file then output file here</div>
-                </Dropzone>
-            </div>
-        );
+  reset = field => {
+    let that = this;
+
+    return () => {
+      let newState = {};
+      newState[field] = null;
+      that.setState(newState);
     }
+  }
+
+  render() {
+    return (
+      <div className="test-case-upload">
+        <h2>Submit new test case</h2>
+        { this.state.input ? (
+          <div>
+            <div>Input: { this.state.input.name } <i className={`fa fa-check`} aria-hidden="true"></i></div>
+            <button onClick={ this.reset('input') }>Reset</button>
+          </div>
+        ) : (
+          <Dropzone className="dropzone" onDrop={ this.onDropInput } multiple={ false }>
+            <div>Please drop input file here</div>
+          </Dropzone>
+        ) }
+        { this.state.output ? (
+          <div>
+            <div>output: { this.state.output.name } <i className={`fa fa-check`} aria-hidden="true"></i></div>
+            <button onClick={ this.reset('output') }>Reset</button>
+          </div>
+        ) : (
+          <Dropzone className="dropzone" onDrop={ this.onDropOutput } multiple={ false }>
+            <div>Please drop output file here</div>
+          </Dropzone>
+        ) }
+      </div>
+    );
+  }
 }
 
 export default connect(store => {
-    return {
-        uploadTestCases: store.uploadTestCases
-    }
+  return {
+    uploadTestCase: store.uploadTestCase
+  }
 })(TestCaseUpload);

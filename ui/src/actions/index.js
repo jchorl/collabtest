@@ -3,8 +3,8 @@ export const RECEIVE_AUTH = 'RECEIVE_AUTH';
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS';
 export const RECEIVE_PROJECTS = 'RECEIVE_PROJECTS';
 export const PROJECT_CREATED = 'PROJECT_CREATED';
-export const UPLOAD_TEST_CASES = 'UPLOAD_TEST_CASES';
-export const UPLOAD_TEST_CASES_COMPLETE = 'UPLOAD_TEST_CASES_COMPLETE';
+export const UPLOAD_TEST_CASE = 'UPLOAD_TEST_CASE';
+export const UPLOAD_TEST_CASE_COMPLETE = 'UPLOAD_TEST_CASE_COMPLETE';
 export const RUN_TEST_CASES = 'RUN_TEST_CASES';
 export const RUN_TEST_CASES_COMPLETE = 'RUN_TEST_CASES_COMPLETE';
 
@@ -71,24 +71,24 @@ export function createProject(project) {
     }
 }
 
-function uploadTestCasesCompleted() {
+function uploadTestCaseCompleted() {
     return {
-        type: UPLOAD_TEST_CASES_COMPLETE
+        type: UPLOAD_TEST_CASE_COMPLETE
     }
 }
 
-function beginUploadTestCases() {
+function beginUploadTestCase() {
     return {
-        type: UPLOAD_TEST_CASES
+        type: UPLOAD_TEST_CASE
     }
 }
 
-export function uploadTestCases(hash, files) {
+export function uploadTestCase(hash, input, output) {
     return dispatch => {
-        dispatch(beginUploadTestCases());
+        dispatch(beginUploadTestCase());
         let data = new FormData();
-        data.append('inFile', files[0]);
-        data.append('outFile', files[1]);
+        data.append('inFile', input);
+        data.append('outFile', output);
 
         fetch(`/api/projects/${hash}/add`, {
             credentials: 'include',
@@ -97,7 +97,7 @@ export function uploadTestCases(hash, files) {
         })
         .then(resp => {
             if (resp.status === 202) {
-                dispatch(uploadTestCasesCompleted());
+                dispatch(uploadTestCaseCompleted());
             }
         });
     }
