@@ -2,10 +2,13 @@ package projects
 
 import (
 	"errors"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -33,10 +36,17 @@ var (
 	})
 )
 
+type Testcase struct {
+	InputLink  string `json:"inputLink"`
+	OutputLink string `json:"outputLink"`
+}
+
 func Init(projects *echo.Group) {
 	projects.GET("", list, jwtMiddleware)
 	projects.POST("", create, jwtMiddleware)
 	projects.GET("/:hash", show)
+	projects.GET("/:hash/testcases", listTestcases)
+	projects.GET("/:hash/testcases/:filename", getTestcase)
 	projects.DELETE("/:hash", delete, jwtMiddleware)
 	projects.POST("/:hash/add", add)
 	projects.POST("/:hash/run", run)
@@ -120,6 +130,77 @@ func list(c echo.Context) error {
 		return result.Error
 	}
 	return c.JSON(http.StatusOK, result.Value)
+}
+
+func listTestcases(c echo.Context) error {
+	hash := c.Param("hash")
+
+	db, ok := c.Get(constants.CTX_DB).(*gorm.DB)
+	if !ok {
+		logrus.WithFields(logrus.Fields{
+			"context": c,
+		}).Error("Unable to get DB from context in project list")
+		return errors.New("Unable to get DB from context")
+	}
+
+	// verify that the proj exists
+	if db.First(&models.Project{Hash: hash}).RecordNotFound() {
+		return constants.UNRECOGNIZED_HASH
+	}
+
+	testFiles, err := ioutil.ReadDir(path.Join("projects", hash))
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error": err,
+			"dir":   path.Join("projects", hash),
+		}).Error("unable to ls dir to get testcases")
+	}
+
+	testcases := map[string]Testcase{}
+	for _, testFile := range testFiles {
+		testcaseHash := testFile.Name()[0 : len(testFile.Name())-len(filepath.Ext(testFile.Name()))] // disgusting way of removing extension. TODO improve.
+
+		testcase := testcases[testcaseHash]
+		if strings.HasSuffix(testFile.Name(), ".in") {
+			testcase.InputLink = getTestcaseLink(hash, testFile.Name())
+		} else if strings.HasSuffix(testFile.Name(), ".out") {
+			testcase.OutputLink = getTestcaseLink(hash, testFile.Name())
+		}
+
+		testcases[testcaseHash] = testcase
+	}
+
+	return c.JSON(http.StatusOK, testcases)
+}
+
+func getTestcaseLink(hash, filename string) string {
+	return "/api/projects/" + hash + "/testcases/" + filename
+}
+
+func getTestcase(c echo.Context) error {
+	hash := c.Param("hash")
+	filename := c.Param("filename")
+
+	db, ok := c.Get(constants.CTX_DB).(*gorm.DB)
+	if !ok {
+		logrus.WithFields(logrus.Fields{
+			"context": c,
+		}).Error("Unable to get DB from context in project list")
+		return errors.New("Unable to get DB from context")
+	}
+
+	// verify that the proj exists
+	if db.First(&models.Project{Hash: hash}).RecordNotFound() {
+		return constants.UNRECOGNIZED_HASH
+	}
+
+	file, err := os.Open(path.Join("projects", hash, filename))
+	if err != nil {
+		return err
+	}
+
+	// add .txt so the browser can display the file, and so the client's computer knows how to open it
+	return c.Inline(file, filename+".txt")
 }
 
 func show(c echo.Context) error {

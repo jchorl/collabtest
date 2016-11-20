@@ -127,5 +127,9 @@ func add(c echo.Context) error {
 		return err
 	}
 
-	return c.NoContent(http.StatusAccepted)
+	testcase := Testcase{
+		InputLink:  getTestcaseLink(hash, filenameBase+".in"),
+		OutputLink: getTestcaseLink(hash, filenameBase+".out"),
+	}
+	return c.JSON(http.StatusOK, testcase)
 }
