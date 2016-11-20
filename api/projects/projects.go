@@ -112,11 +112,9 @@ func list(c echo.Context) error {
 
 	claims := user.Claims.(jwt.MapClaims)
 	userIdF := claims["sub"].(float64)
-	_ = uint(userIdF)
+	userId := uint(userIdF)
 
-	// TODO figure out how to query for the projects that a user owns
-	// for now, just return all projects
-	result := db.Find(&[]models.Project{})
+	result := db.Where("user_id = ?", userId).Find(&[]models.Project{})
 	if result.Error != nil {
 		logrus.WithError(result.Error).Error("Error querying for projects in project list")
 		return result.Error
