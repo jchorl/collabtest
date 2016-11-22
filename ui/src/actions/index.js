@@ -2,6 +2,7 @@ export const REQUEST_AUTH = 'REQUEST_AUTH';
 export const RECEIVE_AUTH = 'RECEIVE_AUTH';
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS';
 export const RECEIVE_PROJECTS = 'RECEIVE_PROJECTS';
+export const REQUEST_PROJECT = 'REQUEST_PROJECT';
 export const REQUEST_TEST_CASES = 'REQUEST_TEST_CASES';
 export const RECEIVE_TEST_CASES = 'RECEIVE_TEST_CASES';
 export const PROJECT_CREATED = 'PROJECT_CREATED';
@@ -50,6 +51,27 @@ export function fetchProjects() {
     })
       .then(resp => resp.json())
       .then(parsed => dispatch(receiveProjects(parsed)));
+  }
+}
+
+function requestProject() {
+  return { type: REQUEST_PROJECT };
+}
+
+function receiveProject(project) {
+  return { type: RECEIVE_PROJECTS, projects: [project] };
+}
+
+export function fetchProject(hash) {
+  return dispatch => {
+    dispatch(requestProject());
+    fetch(`/api/projects/${hash}`, {
+      headers: {
+        'Accept': 'application/json'
+      }
+    })
+      .then(resp => resp.json())
+      .then(parsed => dispatch(receiveProject(parsed)));
   }
 }
 

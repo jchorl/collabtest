@@ -8,6 +8,7 @@ import { Router, Route, hashHistory } from 'react-router';
 import App from './components/App';
 import Home from './components/Home';
 import Dashboard from './components/Dashboard';
+import ProjectPage from './components/ProjectPage';
 import reducers from './reducers';
 
 let store = createStore(
@@ -21,6 +22,7 @@ ReactDOM.render((
                 <Route component={App}>
                     <Route path="/" component={Home} />
                     <Route path="/dashboard" component={Dashboard} />
+                    <Route path="/projects/:hash" component={ProjectPage} />
                 </Route>
             </Router>
         </Provider>
