@@ -10,6 +10,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// Helper for getting DB connection
 func GetDB() (*gorm.DB, error) {
 	user := os.Getenv("POSTGRES_USER")
 	password := os.Getenv("POSTGRES_PASSWORD")

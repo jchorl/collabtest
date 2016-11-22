@@ -38,11 +38,12 @@ func run(c echo.Context) error {
 
 	hash := c.Param("hash")
 
-	// verify that the proj exists
+	// Verify that the proj exists
 	if db.First(&models.Project{Hash: hash}).RecordNotFound() {
 		return constants.UNRECOGNIZED_HASH
 	}
 
+	// Get docker client for communicating with docker
 	dockerClient, ok := c.Get(constants.CTX_DOCKER_CLIENT).(*client.Client)
 	if !ok {
 		logrus.WithFields(logrus.Fields{
@@ -57,6 +58,7 @@ func run(c echo.Context) error {
 		return err
 	}
 
+	// Get upload program to test
 	testProgramReader, err := file.Open()
 	if err != nil {
 		logrus.WithError(err).Error("Could not open uploaded file to write to disk")
@@ -64,12 +66,13 @@ func run(c echo.Context) error {
 	}
 	defer testProgramReader.Close()
 
+	// Get container configuration for type of program submitted
 	containerConfig, err := selectConfig(file.Filename)
 	if err != nil {
 		return err
 	}
 
-	// make sure the cmd pipes in the test input
+	// Make sure the cmd pipes in the test input
 	containerConfig.Cmd[len(containerConfig.Cmd)-1] = containerConfig.Cmd[len(containerConfig.Cmd)-1] + " < testIn"
 
 	hostConfig := &container.HostConfig{
@@ -80,7 +83,7 @@ func run(c echo.Context) error {
 		},
 	}
 
-	// get project test files
+	// Get project test files
 	testFiles, err := ioutil.ReadDir(path.Join("projects", hash))
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
@@ -89,6 +92,7 @@ func run(c echo.Context) error {
 		}).Error("unable to ls dir to get test files to run")
 	}
 
+	// Run program through each test and record expected and actual result diffs
 	diffs := []string{}
 	for _, testFile := range testFiles {
 		if !strings.HasSuffix(testFile.Name(), ".in") {
@@ -97,24 +101,28 @@ func run(c echo.Context) error {
 
 		logrus.WithField("name", testFile.Name()).Debug("processing test file")
 
+		// Create a container to run test
 		createResponse, err := dockerClient.ContainerCreate(context.Background(), &containerConfig, hostConfig, nil, "")
 		if err != nil {
 			logrus.WithError(err).Error("Could not create container")
 			return err
 		}
 
+		// Copy test program into container
 		err = copyToContainer(context.Background(), dockerClient, testProgramReader, createResponse.ID, path.Join("/build", file.Filename))
 		if err != nil {
 			logrus.WithError(err).Error("Could not copy executable to container")
 			return err
 		}
 
+		// Reset test program reader for next run
 		_, err = testProgramReader.Seek(0, io.SeekStart)
 		if err != nil {
 			logrus.WithError(err).Error("Could not seek to start of program reader")
 			return err
 		}
 
+		// Get test input file
 		testFileReader, err := os.Open(path.Join("projects", hash, testFile.Name()))
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
@@ -126,19 +134,23 @@ func run(c echo.Context) error {
 		}
 		defer testFileReader.Close()
 
+		// copy test input file into container
 		err = copyToContainer(context.Background(), dockerClient, testFileReader, createResponse.ID, path.Join("/build", "testIn"))
 		if err != nil {
 			logrus.WithError(err).Error("Could not copy test file to container")
 			return err
 		}
 
+		// Run container
 		if err := dockerClient.ContainerStart(context.Background(), createResponse.ID, types.ContainerStartOptions{}); err != nil {
 			logrus.WithError(err).Error("Error starting container")
 			return err
 		}
 
+		// Wait until container finishes execution
 		dockerClient.ContainerWait(context.Background(), createResponse.ID)
 
+		// Get logs from container which include program output
 		logsOptions := types.ContainerLogsOptions{
 			ShowStdout: true,
 			ShowStderr: true,
@@ -150,9 +162,10 @@ func run(c echo.Context) error {
 		}
 		defer logsReadCloser.Close()
 
-		// docker prepends 8 bytes of info: see HEADER at https://docs.docker.com/v1.6/reference/api/docker_remote_api_v1.14/
+		// Docker prepends 8 bytes of info: see HEADER at https://docs.docker.com/v1.6/reference/api/docker_remote_api_v1.14/
 		logsBuffer.Next(8)
 
+		// Save a instance of the project being run
 		runInstance := models.Run{
 			Project: models.Project{Hash: hash},
 			Stdout:  logsBuffer.String(),
@@ -162,7 +175,7 @@ func run(c echo.Context) error {
 		db.Create(&runInstance)
 
 		expectedOutFilename := testFile.Name()[0:len(testFile.Name())-len(filepath.Ext(testFile.Name()))] + ".out" // disgusting way of removing extension. TODO improve.
-		// open expected
+		// Open expected test file output
 		testFileOutputReader, err := os.Open(path.Join("projects", hash, expectedOutFilename))
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
@@ -174,27 +187,34 @@ func run(c echo.Context) error {
 		}
 		defer testFileOutputReader.Close()
 
+		// Diff expected and actual output
 		d, err := diff(testFileOutputReader, logsBuffer)
 		if err != nil {
 			logrus.WithError(err).Error("unable to diff expected output with actual output")
 			continue
 		}
 
+		// Add diff of actual and expected output
 		diffs = append(diffs, d)
 	}
 
 	return c.JSON(http.StatusOK, diffs)
 }
 
+// Helper for copying file from memory directly into running docker container without first saving to filesystem
 func copyToContainer(ctx context.Context, dockerClient *client.Client, file io.ReadCloser, dstContainer, dstPath string) (err error) {
+	// Create a pipe with one end passed to docker function, and the other end passed to buffer
 	pipeReader, pipeWriter := io.Pipe()
 	buf := bufio.NewWriterSize(pipeWriter, 32*1024)
 
 	go func() {
+		// Create a tar writer such that all writes are written to buf
 		tarWriter := tar.NewWriter(buf)
+		// Create a buffer that flushes to the tar writer
 		tarBuf := bufio.NewWriterSize(tarWriter, 32*1024)
 
 		defer func() {
+			// Flushing buf writes to pipeWriter
 			buf.Flush()
 			if err := tarWriter.Close(); err != nil {
 				logrus.WithError(err).Error("Can't close tar writer")
@@ -204,8 +224,9 @@ func copyToContainer(ctx context.Context, dockerClient *client.Client, file io.R
 			}
 		}()
 
+		// Write contents of file into tarWriter
 		if err := addTarFile(filepath.Base(dstPath), file, tarWriter, tarBuf); err != nil {
-			// if pipe is broken, stop writing tar stream to it
+			// If pipe is broken, stop writing tar stream to it
 			if err == io.ErrClosedPipe {
 				logrus.WithError(err).Error("Error adding file to tar due to closed pipe")
 				return
@@ -219,6 +240,7 @@ func copyToContainer(ctx context.Context, dockerClient *client.Client, file io.R
 	return dockerClient.CopyToContainer(ctx, dstContainer, filepath.Dir(dstPath), pipeReader, types.CopyToContainerOptions{})
 }
 
+// Help function to tar file so docker client's CopyToContainer method can be used
 func addTarFile(filename string, file io.ReadCloser, tarWriter *tar.Writer, tarBuf *bufio.Writer) error {
 	buffer := new(bytes.Buffer)
 	size, err := buffer.ReadFrom(file)
@@ -227,23 +249,27 @@ func addTarFile(filename string, file io.ReadCloser, tarWriter *tar.Writer, tarB
 		return err
 	}
 
+	// Tar header
 	hdr := &tar.Header{
 		Name: filename,
 		Mode: 0644,
 		Size: size,
 	}
 
+	// Write tar header
 	if err := tarWriter.WriteHeader(hdr); err != nil {
 		logrus.WithError(err).Error("Error writing header to tar file")
 		return err
 	}
 
+	// Copy file buffer into tarBuff
 	_, err = io.Copy(tarBuf, buffer)
 	if err != nil {
 		logrus.WithError(err).Error("Error copying from buffer to tar buffer")
 		return err
 	}
 
+	// Flushing tarBuf writes to tarWriter
 	err = tarBuf.Flush()
 	if err != nil {
 		logrus.WithError(err).Error("Error flushing tar buffer")
@@ -274,8 +300,9 @@ func diffSample(c echo.Context) error {
 	return c.HTML(http.StatusOK, d)
 }
 
+// Diffs 2 io.Readers
 func diff(in1, in2 io.Reader) (string, error) {
-	// read into strings
+	// Read io.Readers into strings
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(in1)
 	str1 := buf.String()
@@ -289,12 +316,15 @@ func diff(in1, in2 io.Reader) (string, error) {
 		"str2": str2,
 	}).Debug("diffing")
 
+	// Diff strings
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(str1, str2, false)
 	return dmp.DiffPrettyHtml(diffs), nil
 }
 
+// Select the correct docker config depending on the type of program being run
 func selectConfig(srcpath string) (container.Config, error) {
+	// Get file extension
 	var extension = filepath.Ext(srcpath)
 	logrus.Debug(extension)
 
@@ -306,6 +336,7 @@ func selectConfig(srcpath string) (container.Config, error) {
 		StopTimeout:     &timeout,
 	}
 
+	// Get container config based on file extension
 	defaults, ok := constants.FILETYPE_CONFIGS[extension]
 	if !ok {
 		logrus.WithField("extension", extension).Error("Attempting to run file with unknown extension")

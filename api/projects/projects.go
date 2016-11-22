@@ -21,6 +21,7 @@ import (
 	"github.com/jchorl/collabtest/models"
 )
 
+// Contants for hash generation
 const (
 	charBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	charIdxBits = 6                  // 6 bits to represent a char index
@@ -41,6 +42,7 @@ type Testcase struct {
 	OutputLink string `json:"outputLink"`
 }
 
+// Initialize routes for projects
 func Init(projects *echo.Group) {
 	projects.GET("", list, jwtMiddleware)
 	projects.POST("", create, jwtMiddleware)
@@ -61,6 +63,7 @@ func create(c echo.Context) error {
 		}).Error("Unable to decode project in project create")
 	}
 
+	// Get DB connection
 	db, ok := c.Get(constants.CTX_DB).(*gorm.DB)
 	if !ok {
 		logrus.WithFields(logrus.Fields{
@@ -69,6 +72,7 @@ func create(c echo.Context) error {
 		return errors.New("Unable to get DB from context")
 	}
 
+	// Get user JWT parsed by middleware
 	user, ok := c.Get("user").(*jwt.Token)
 	if !ok {
 		logrus.WithFields(logrus.Fields{
@@ -81,6 +85,7 @@ func create(c echo.Context) error {
 	userIdF := claims["sub"].(float64)
 	userId := uint(userIdF)
 
+	// Create project for user
 	hash := randomHash()
 	project.Hash = hash
 	project.UserId = userId
@@ -93,8 +98,8 @@ func create(c echo.Context) error {
 		return result.Error
 	}
 
-	// create a dir for the project
-	// dont fail on this, try again on file upload and fail on that
+	// Create a dir for the project
+	// Dont fail on this, try again on file upload and fail on that
 	err := os.Mkdir(path.Join("projects", hash), 0700)
 	if err != nil {
 		logrus.WithError(err).Error("Created project but could not create project dir")
@@ -103,6 +108,7 @@ func create(c echo.Context) error {
 	return c.JSON(http.StatusOK, project)
 }
 
+// Listing a users project
 func list(c echo.Context) error {
 	db, ok := c.Get(constants.CTX_DB).(*gorm.DB)
 	if !ok {
@@ -112,6 +118,7 @@ func list(c echo.Context) error {
 		return errors.New("Unable to get DB from context")
 	}
 
+	// Get user JWT parsed by middleware
 	user, ok := c.Get("user").(*jwt.Token)
 	if !ok {
 		logrus.WithFields(logrus.Fields{
@@ -132,6 +139,7 @@ func list(c echo.Context) error {
 	return c.JSON(http.StatusOK, result.Value)
 }
 
+// List test cases of a project
 func listTestcases(c echo.Context) error {
 	hash := c.Param("hash")
 
@@ -143,7 +151,7 @@ func listTestcases(c echo.Context) error {
 		return errors.New("Unable to get DB from context")
 	}
 
-	// verify that the proj exists
+	// Verify that the project exists
 	if db.First(&models.Project{Hash: hash}).RecordNotFound() {
 		return constants.UNRECOGNIZED_HASH
 	}
@@ -177,6 +185,7 @@ func getTestcaseLink(hash, filename string) string {
 	return "/api/projects/" + hash + "/testcases/" + filename
 }
 
+// Return test file contents
 func getTestcase(c echo.Context) error {
 	hash := c.Param("hash")
 	filename := c.Param("filename")
@@ -189,7 +198,7 @@ func getTestcase(c echo.Context) error {
 		return errors.New("Unable to get DB from context")
 	}
 
-	// verify that the proj exists
+	// Verify that the project exists
 	if db.First(&models.Project{Hash: hash}).RecordNotFound() {
 		return constants.UNRECOGNIZED_HASH
 	}
@@ -199,10 +208,11 @@ func getTestcase(c echo.Context) error {
 		return err
 	}
 
-	// add .txt so the browser can display the file, and so the client's computer knows how to open it
+	// Add .txt so the browser can display the file, and so the client's computer knows how to open it
 	return c.Inline(file, filename+".txt")
 }
 
+// Return info about a specific project
 func show(c echo.Context) error {
 	db, ok := c.Get(constants.CTX_DB).(*gorm.DB)
 	if !ok {
@@ -218,6 +228,7 @@ func show(c echo.Context) error {
 	return c.JSON(http.StatusOK, result.Value)
 }
 
+// Delete a project
 func deleteProject(c echo.Context) error {
 	db, ok := c.Get(constants.CTX_DB).(*gorm.DB)
 	if !ok {
@@ -234,6 +245,7 @@ func deleteProject(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
+// Help for generating random hash for project
 func randomHash() string {
 	b := make([]byte, constants.HASH_LENGTH)
 	// A src.Int63() generates 63 random bits, enough for charIdxMax characters!

@@ -18,7 +18,9 @@ import (
 	"github.com/jchorl/collabtest/models"
 )
 
+// Creating a new project
 func add(c echo.Context) error {
+	// Get DB connection
 	db, ok := c.Get(constants.CTX_DB).(*gorm.DB)
 	if !ok {
 		logrus.WithFields(logrus.Fields{
@@ -29,7 +31,7 @@ func add(c echo.Context) error {
 
 	hash := c.Param("hash")
 
-	// validate that hash is in the db
+	// Validate that project identifying hash is in the DB
 	if db.First(&models.Project{Hash: hash}).RecordNotFound() {
 		logrus.Error("Unable to find hash in db when uploading test cases")
 		return constants.UNRECOGNIZED_HASH
@@ -37,6 +39,7 @@ func add(c echo.Context) error {
 
 	dir := path.Join("projects", hash)
 
+	// Get submitted input test files
 	inFile, err := c.FormFile("inFile")
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
@@ -46,6 +49,7 @@ func add(c echo.Context) error {
 		return err
 	}
 
+	// Get submitted output test files
 	outFile, err := c.FormFile("outFile")
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
@@ -55,11 +59,12 @@ func add(c echo.Context) error {
 		return err
 	}
 
-	// ignore errors because the path should exist
+	// Ignore errors because the path should exist
 	_ = os.Mkdir(path.Join("projects", hash), 0700)
 
 	inFileHash := md5.New()
 
+	// Get file io.ReadCloser for input test file
 	inFileReader, err := inFile.Open()
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
@@ -70,6 +75,7 @@ func add(c echo.Context) error {
 	}
 	defer inFileReader.Close()
 
+	// Write input test file to byte buffer and md5 hasher
 	var inBuf bytes.Buffer
 	if _, err := io.Copy(&inBuf, io.TeeReader(inFileReader, inFileHash)); err != nil {
 		logrus.WithError(err).Error("Error reading uploaded test case to md5 hasher and buffer")
@@ -79,6 +85,7 @@ func add(c echo.Context) error {
 	// TODO figure out how to better decode the checksum
 	filenameBase := string(fmt.Sprintf("%x", inFileHash.Sum(nil)))
 
+	// Write file for holding input test file on filesystem
 	inFileWriter, err := os.Create(path.Join(dir, filenameBase+".in"))
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
@@ -89,6 +96,7 @@ func add(c echo.Context) error {
 	}
 	defer inFileWriter.Close()
 
+	// Write input test file to filesystem
 	if _, err = io.Copy(inFileWriter, &inBuf); err != nil {
 		logrus.WithFields(logrus.Fields{
 			"hash":     hash,
@@ -98,6 +106,7 @@ func add(c echo.Context) error {
 		return err
 	}
 
+	// Repeat file writing for output test files
 	outFileReader, err := outFile.Open()
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
@@ -127,6 +136,7 @@ func add(c echo.Context) error {
 		return err
 	}
 
+	// Return links to test files
 	testcase := Testcase{
 		InputLink:  getTestcaseLink(hash, filenameBase+".in"),
 		OutputLink: getTestcaseLink(hash, filenameBase+".out"),

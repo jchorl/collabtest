@@ -18,6 +18,7 @@ import (
 	"github.com/jchorl/collabtest/models"
 )
 
+// Global variables
 var (
 	jwtMiddleware = middleware.JWTWithConfig(middleware.JWTConfig{
 		SigningKey:  []byte(constants.JWT_SECRET),
@@ -25,24 +26,29 @@ var (
 	})
 )
 
+// GitHub response model
 type githubAuthResponse struct {
 	AccessToken string `json:"access_token"`
 }
 
+// GitHub user model
 type githubUserInfo struct {
 	ID    uint   `json:"id"`
 	Login string `json:"login"`
 }
 
+// Initialize authentication routes
 func Init(auth *echo.Group) {
 	auth.GET("/login", login)
 	auth.GET("/loggedIn", loggedIn, jwtMiddleware)
 }
 
 func login(c echo.Context) error {
+	// Get token from OAuth callback
 	githubCode := c.QueryParam("code")
 	logrus.WithField("code", githubCode).Debug("got code from github")
 
+	// Get DB connection from middleware
 	db, ok := c.Get(constants.CTX_DB).(*gorm.DB)
 	if !ok {
 		logrus.WithFields(logrus.Fields{
@@ -53,6 +59,7 @@ func login(c echo.Context) error {
 
 	logrus.Debug("got database")
 
+	// Create URL query object for requesting user access token from GitHub
 	u := url.URL{Path: "https://github.com/login/oauth/access_token"}
 	q := u.Query()
 	q.Set("client_id", constants.GITHUB_CLIENT_ID)
@@ -71,6 +78,7 @@ func login(c echo.Context) error {
 
 	logrus.Debug("made request to exchange github code")
 
+	// Make request to GitHub with OAuth token for user access token
 	req.Header.Add("Accept", "application/json")
 	client := http.DefaultClient
 	resp, err := client.Do(req)
@@ -85,6 +93,7 @@ func login(c echo.Context) error {
 
 	logrus.Debug("exchanged")
 
+	// Parse access token response from GitHub
 	parsedAuthResponse := githubAuthResponse{}
 	err = json.NewDecoder(resp.Body).Decode(&parsedAuthResponse)
 	if err != nil {
@@ -97,6 +106,7 @@ func login(c echo.Context) error {
 
 	logrus.Debug("parsed auth response")
 
+	// Create request to get user data using access token
 	req, err = http.NewRequest("GET", "https://api.github.com/user", nil)
 	if err != nil {
 		logrus.WithError(err).Error("unable to create req to get github user id")
@@ -105,6 +115,7 @@ func login(c echo.Context) error {
 
 	logrus.Debug("created req for user id")
 
+	// Make request to GitHub for user data
 	req.Header.Set("Authorization", "token "+parsedAuthResponse.AccessToken)
 	resp, err = client.Do(req)
 	if err != nil {
@@ -118,6 +129,7 @@ func login(c echo.Context) error {
 
 	logrus.Debug("got response for user id")
 
+	// Parse GitHub user data
 	parsedUserInfo := githubUserInfo{}
 	err = json.NewDecoder(resp.Body).Decode(&parsedUserInfo)
 	if err != nil {
@@ -130,11 +142,13 @@ func login(c echo.Context) error {
 
 	logrus.Debug("parsed github info")
 
+	// Create user in DB
 	user := models.User{GithubId: parsedUserInfo.ID}
 	db.FirstOrCreate(&user, user)
 
 	logrus.Debug("put user in db")
 
+	// Create signed JWT with user's data. The JWT identifies the user to the app.
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": user.ID,
 		"exp": time.Now().Add(time.Hour * 72).Unix(),
@@ -151,6 +165,7 @@ func login(c echo.Context) error {
 
 	logrus.Debug("got signed string")
 
+	// Set authorization cookie for user
 	cookie := new(echo.Cookie)
 	cookie.SetName("Authorization")
 	cookie.SetValue(t)
@@ -168,6 +183,7 @@ func login(c echo.Context) error {
 
 	logrus.WithField("redir", redir).Debug("redirecting to")
 
+	// Upon login, redirect user to homepage
 	return c.Redirect(http.StatusFound, redir)
 }
 
