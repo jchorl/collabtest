@@ -76,7 +76,6 @@ func run(c echo.Context) error {
 	containerConfig.Cmd[len(containerConfig.Cmd)-1] = containerConfig.Cmd[len(containerConfig.Cmd)-1] + " < testIn"
 
 	hostConfig := &container.HostConfig{
-		AutoRemove: true,
 		Resources: container.Resources{
 			CPUShares: constants.BUILD_CPU_SHARE,
 			Memory:    constants.BUILD_MEMORY,
@@ -107,6 +106,11 @@ func run(c echo.Context) error {
 			logrus.WithError(err).Error("Could not create container")
 			return err
 		}
+		defer func() {
+			if err := dockerClient.ContainerRemove(context.Background(), createResponse.ID, types.ContainerRemoveOptions{Force: true}); err != nil {
+				logrus.WithError(err).Error("Unable to remove container after running a test case")
+			}
+		}()
 
 		// Copy test program into container
 		err = copyToContainer(context.Background(), dockerClient, testProgramReader, createResponse.ID, path.Join("/build", file.Filename))
@@ -156,9 +160,14 @@ func run(c echo.Context) error {
 			ShowStderr: true,
 		}
 		logsReadCloser, err := dockerClient.ContainerLogs(context.Background(), createResponse.ID, logsOptions)
+		if err != nil {
+			logrus.WithError(err).Error("Cannot even get container logs from container")
+			return err
+		}
 		logsBuffer := new(bytes.Buffer)
 		if _, err := logsBuffer.ReadFrom(logsReadCloser); err != nil {
 			logrus.WithError(err).Error("Cannot read container logs")
+			return err
 		}
 		defer logsReadCloser.Close()
 
@@ -230,10 +239,9 @@ func copyToContainer(ctx context.Context, dockerClient *client.Client, file io.R
 			if err == io.ErrClosedPipe {
 				logrus.WithError(err).Error("Error adding file to tar due to closed pipe")
 				return
-			} else {
-				logrus.WithError(err).Error("Error adding file to tar")
-				return
 			}
+			logrus.WithError(err).Error("Error adding file to tar")
+			return
 		}
 	}()
 
